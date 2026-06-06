@@ -108,20 +108,31 @@ function App() {
     [realRain, liveZoneRain]
   );
 
+  // Alertas = riesgo PREVISTO para las próximas horas: usa el pico del pronóstico
+  // (o la lluvia simulada si es mayor), no el instantáneo — así son útiles aunque ahora no llueva.
+  const forecastPeak = (liveWx && liveWx.forecast && liveWx.forecast.length)
+    ? Math.max(0, ...liveWx.forecast.map((f) => f.precip || 0))
+    : 0;
+  const alertRain = Math.max(rainMmh || 0, forecastPeak);
+  const alertState = React.useMemo(
+    () => Ga.computeState(alertRain, 3, scenario, simParams, null),
+    [alertRain, scenario, simMode, drainage, soilSat, canalLevel]
+  );
+
   // payload enriquecido para el LLM (incluye elevación y susceptibilidad por zona)
   const buildRecsPayload = () => {
     const nivel = (s) => s >= 80 ? 5 : s >= 60 ? 4 : s >= 40 ? 3 : s >= 20 ? 2 : 1;
-    const zs = (modelState && modelState.zoneScores) ? modelState.zoneScores : [];
+    const zs = (alertState && alertState.zoneScores) ? alertState.zoneScores : [];
     const zonas = zs.slice(0, 14).map((z) => ({
       zona: z.zone.short,
       alcaldia: z.zone.name,
       nivel_riesgo: nivel(z.score),
       vuln: Math.round(z.zone.vuln * 100) / 100,
-      rain_mmh: Math.round(((liveZoneRain && liveZoneRain[z.zone.name] != null ? liveZoneRain[z.zone.name] : rainMmh) || 0) * 10) / 10,
+      rain_mmh: Math.round(alertRain * 10) / 10,
       elevacion_m: z.zone.elev,
       susceptibilidad_fisica: Math.round(z.zone.sus * 100) / 100,
     }));
-    return { contexto: { indice_compuesto: modelState ? modelState.composite : 0, lluvia_mmh: Math.round(rainMmh || 0) }, zonas };
+    return { contexto: { indice_compuesto: alertState ? alertState.composite : 0, lluvia_prevista_mmh: Math.round(alertRain) }, zonas };
   };
 
   const fetchRecs = () => {
@@ -262,7 +273,7 @@ function App() {
 
         {/* ---- ALERTAS ---- */}
         {section === "alertas" && (
-          <AlertasSection onNav={setSection} modelState={modelState}
+          <AlertasSection onNav={setSection} modelState={alertState}
             ai={aiRecs} aiStatus={aiRecsStatus} onRegen={fetchRecs} />
         )}
 

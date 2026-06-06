@@ -21,10 +21,19 @@ PERSONALIZA cada tarjeta con los datos de SU zona (demuestra que entiendes el ma
 - susceptibilidad_fisica alta (>= 0.8): menciona explícitamente el drenaje/alcantarillado deficiente, la cuenca baja o el lecho lacustre como causa.
 - elevacion_m alta con riesgo medio: aclara que está en terreno más elevado, que el peligro es menor y que mantengan la calma con precaución.
 - vuln alta (>= 0.7): considera población vulnerable (adultos mayores, niños, viviendas precarias).
-- Cada tarjeta DEBE ser distinta. PROHIBIDO repetir el mismo texto (p. ej. "Evacúa ahora") en varias zonas.
+VARIEDAD (crítico): las tarjetas NO deben sonar iguales. Varía la ESTRUCTURA de cada una:
+- unas empiezan por la acción ("Sube tus muebles y no estaciones en la calle…"),
+- otras por la geografía/causa de la zona ("Al estar sobre el antiguo lecho del lago, Tláhuac…"),
+- otras por el tiempo previsto ("En las próximas 2-3 horas…").
+NO empieces TODAS con "La lluvia en tu zona es de X mm/h". Varía el vocabulario, la longitud y el título; cada título debe ser único y distinto.
 
-COBERTURA (muy importante):
-- Incluye SIEMPRE TODAS las zonas con nivel_riesgo >= 4 (rojas). No las limites ni omitas ninguna, aunque sean muchas.
+CUÁNDO generar una alerta:
+- Una zona SOLO aparece (en cualquier lista) si su nivel_riesgo >= 3. La susceptibilidad estructural alta NO crea una alerta por sí sola sin lluvia ni riesgo actual.
+- Si la lluvia prevista es ~0 (menor a 3 mm/h) y nivel_riesgo <= 2, NO generes nada para esa zona y NUNCA digas "evacúa".
+- Si NINGUNA zona tiene nivel_riesgo >= 3, devuelve { "ciudadanos": [], "autoridades": [] }.
+
+COBERTURA (cuando SÍ hay riesgo):
+- Incluye SIEMPRE todas las zonas con nivel_riesgo >= 4 (rojas). No las limites ni omitas ninguna, aunque sean muchas.
 - Si hay pocas rojas, agrega también las de nivel_riesgo = 3 (naranjas) hasta tener varias recomendaciones útiles.
 - Nunca dejes fuera una zona roja por llegar a un tope.
 
@@ -78,7 +87,7 @@ export default async function handler(req, res) {
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model,
-        temperature: 0.5,
+        temperature: 0.7,
         max_tokens: 6000,
         response_format: { type: "json_object" },
         messages: [
