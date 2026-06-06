@@ -222,7 +222,8 @@ function App() {
 
         {/* ---- ALERTAS ---- */}
         {section === "alertas" && (
-          <AlertasSection onNav={setSection} modelState={modelState} simParams={simParams} />
+          <AlertasSection onNav={setSection} modelState={modelState} simParams={simParams}
+            rainMmh={rainMmh} liveZoneRain={liveZoneRain} />
         )}
 
         {/* ---- TRANSPARENCIA ---- */}

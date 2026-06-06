@@ -281,15 +281,63 @@ const LV_BADGE = { 3: { t: "Alto", c: "red" }, 2: { t: "Medio", c: "amber" }, 1:
 const PRIO_COLOR = { 3: "var(--red)", 2: "var(--orange)", 1: "var(--blue)" };
 const PRIO_BG    = { 3: "rgba(239,68,68,.12)", 2: "rgba(249,115,22,.12)", 1: "rgba(59,130,246,.12)" };
 
-function AlertasSection({ onNav, modelState }) {
+const CAT_ICON = { PROTOCOLO:"🚨", EMERGENCIA:"🚨", ALERTA:"⚠️", DESPLIEGUE:"🚒", BOMBEO:"🚒", CANALES:"🌊", COMPUERTAS:"🌊", INFRAESTRUCTURA:"🔧", DRENAJE:"🔧", ALERTAMIENTO:"📢", AVISO:"📢", ALBERGUES:"🏫", EVACUACIÓN:"🚨", MONITOREO:"📡" };
+const catIcon = (c) => CAT_ICON[String(c || "").toUpperCase()] || "✨";
+const nivelFromScore = (s) => s >= 80 ? 5 : s >= 60 ? 4 : s >= 40 ? 3 : s >= 20 ? 2 : 1;
+
+function AlertasSection({ onNav, modelState, rainMmh, liveZoneRain }) {
   const [tab, setTab] = React.useState("ciudadanos");
   const [filter, setFilter] = React.useState(0);
   const [q, setQ] = React.useState("");
+  const [ai, setAi] = React.useState(null);
+  const [aiStatus, setAiStatus] = React.useState("idle"); // idle | loading | ok | fallback
 
   const authorityRecs = React.useMemo(
     () => generateAuthorityRecs(modelState),
     [modelState && modelState.composite]
   );
+
+  // LLM payload from the live model state (mapea al esquema del system prompt)
+  const buildPayload = () => {
+    const zonas = (modelState && modelState.zoneScores ? modelState.zoneScores : []).slice(0, 8).map((z) => ({
+      zona: z.zone.short,
+      alcaldia: z.zone.name,
+      nivel_riesgo: nivelFromScore(z.score),
+      vuln: Math.round(z.zone.vuln * 100) / 100,
+      rain_mmh: Math.round(((liveZoneRain && liveZoneRain[z.zone.name] != null ? liveZoneRain[z.zone.name] : rainMmh) || 0) * 10) / 10,
+    }));
+    return { contexto: { indice_compuesto: modelState ? modelState.composite : 0, lluvia_mmh: Math.round(rainMmh || 0) }, zonas };
+  };
+
+  const fetchAI = () => {
+    setAiStatus("loading");
+    fetch("/api/recommendations", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(buildPayload()),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d && d.ok && ((d.ciudadanos && d.ciudadanos.length) || (d.autoridades && d.autoridades.length))) {
+          setAi(d); setAiStatus("ok");
+        } else { setAiStatus("fallback"); }
+      })
+      .catch(() => setAiStatus("fallback"));
+  };
+
+  React.useEffect(() => { fetchAI(); }, []); // genera al entrar a la sección
+
+  // autoridades: usa IA si está disponible; si no, las plantillas por reglas
+  const autoridadesCards = (aiStatus === "ok" && ai && ai.autoridades && ai.autoridades.length)
+    ? ai.autoridades.map((r) => ({
+        prio: Math.max(1, Math.min(3, r.prioridad || 1)),
+        category: r.categoria || "ACCIÓN",
+        icon: catIcon(r.categoria),
+        title: r.titulo || "",
+        zone: r.zona || "—",
+        detail: r.detalle || "",
+        window: r.ventana || "—",
+      }))
+    : authorityRecs;
 
   const list = Gx.COLONIAS.filter((c) =>
     (filter === 0 || c.level === filter) &&
@@ -297,7 +345,20 @@ function AlertasSection({ onNav, modelState }) {
   );
   const pills = [{ k: 0, t: "Todos" }, { k: 3, t: "Alto" }, { k: 2, t: "Medio" }, { k: 1, t: "Bajo" }];
 
-  const highCount = authorityRecs.filter(r => r.prio >= 2).length;
+  const highCount = autoridadesCards.filter(r => r.prio >= 2).length;
+
+  const aiBar = (
+    <div className="ai-statusbar">
+      <span className={"ai-chip" + (aiStatus === "ok" ? " on" : "")}>
+        {aiStatus === "loading"
+          ? <React.Fragment><span className="ai-spin" /> Redactando con IA…</React.Fragment>
+          : aiStatus === "ok"
+          ? <React.Fragment>✨ Redactado por IA · Groq · <b>{ai.model ? ai.model.split("-").slice(0,2).join(" ") : "llama"}</b></React.Fragment>
+          : <React.Fragment>📋 Plantilla por reglas <span className="ai-hint">· activa la IA con GROQ_API_KEY</span></React.Fragment>}
+      </span>
+      <button className="ai-regen" onClick={fetchAI} disabled={aiStatus === "loading"}>↻ Regenerar</button>
+    </div>
+  );
 
   return (
     <section className="section sec-alertas">
@@ -321,9 +382,28 @@ function AlertasSection({ onNav, modelState }) {
           </button>
         </div>
 
+        {aiBar}
+
         {/* ---- CIUDADANÍA tab ---- */}
         {tab === "ciudadanos" && (
           <React.Fragment>
+            {aiStatus === "ok" && ai.ciudadanos && ai.ciudadanos.length > 0 && (
+              <div className="ai-citizen-wrap">
+                {ai.ciudadanos.map((c, i) => {
+                  const col = c.nivel >= 4 ? "var(--red)" : c.nivel >= 3 ? "var(--orange)" : "var(--cyan)";
+                  const emoji = c.nivel >= 4 ? "🔴" : c.nivel >= 3 ? "🟠" : "🔵";
+                  return (
+                    <div className="ai-citizen-card glass" key={i} style={{ borderLeft: `4px solid ${col}` }}>
+                      <span className="ai-cc-emoji">{emoji}</span>
+                      <div>
+                        <div className="ai-cc-zone">{c.zona}</div>
+                        <div className="ai-cc-msg">{c.mensaje}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
             <div className="al-intro-banner glass" style={{marginBottom:20,padding:"14px 18px",borderLeft:"4px solid var(--cyan)",borderRadius:"0 14px 14px 0"}}>
               <div style={{fontSize:12.5,fontWeight:600,color:"var(--ink)",marginBottom:4}}>Qué hacer si estás en una zona de riesgo</div>
               <div style={{fontSize:12,color:"var(--ink-3)",lineHeight:1.55}}>Evita circular por pasos a desnivel y avenidas inundables. No cruces corrientes de agua en movimiento. Sigue las indicaciones de Protección Civil.</div>
@@ -367,12 +447,12 @@ function AlertasSection({ onNav, modelState }) {
         {tab === "autoridades" && (
           <React.Fragment>
             <div className="al-intro-banner glass" style={{marginBottom:24,padding:"14px 18px",borderLeft:"4px solid var(--orange)",borderRadius:"0 14px 14px 0"}}>
-              <div style={{fontSize:12.5,fontWeight:600,color:"var(--ink)",marginBottom:4}}>Recomendaciones generadas por IA · basadas en el modelo hidrológico actual</div>
+              <div style={{fontSize:12.5,fontWeight:600,color:"var(--ink)",marginBottom:4}}>{aiStatus === "ok" ? "Recomendaciones redactadas por IA (Groq)" : "Recomendaciones por reglas"} · basadas en el modelo hidrológico actual</div>
               <div style={{fontSize:12,color:"var(--ink-3)",lineHeight:1.55}}>Acciones preventivas derivadas del análisis del riesgo compuesto ({modelState ? modelState.composite : "—"}/100). Ordene por ventana de acción para priorizar.</div>
             </div>
 
             <div className="auth-recs">
-              {authorityRecs.map((rec, i) => (
+              {autoridadesCards.map((rec, i) => (
                 <div className="auth-rec glass" key={i} style={{borderLeft:`4px solid ${PRIO_COLOR[rec.prio]}`}}>
                   <div className="auth-rec-head">
                     <div style={{display:"flex",alignItems:"center",gap:10}}>

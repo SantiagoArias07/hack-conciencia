@@ -157,6 +157,15 @@ El acto de IA **no es la simulación hidráulica** (eso es física), sino **fusi
 
 La robustez se mide con **validación cruzada Leave-One-Out + cobertura del intervalo al 90 %** mediante enmascaramiento artificial de sensores (ocultar estaciones que sí existen, predecir y medir el error).
 
+### Recomendaciones por IA (Groq) — integrado
+
+Las recomendaciones de la sección **Alertas** (mensajes para ciudadanía y acciones para autoridades) las **redacta un LLM vía [Groq](https://groq.com)**, a través de una función serverless ([`api/recommendations.js`](api/recommendations.js)) para **no exponer la API key** en el cliente. El frontend envía el estado de riesgo por zona; el modelo responde en JSON estructurado siguiendo reglas estrictas (ciudadanos: máx. 15 palabras; autoridades: técnico con ventana de tiempo; prioridad máxima si `nivel_riesgo ≥ 4` y `vuln ≥ 0.7`). Si no hay key o el servicio falla, **cae automáticamente a recomendaciones por reglas** — la app nunca se rompe.
+
+**Activarlo:**
+1. Consigue una API key gratis en **[console.groq.com/keys](https://console.groq.com/keys)**.
+2. En Vercel → *Settings → Environment Variables*, añade `GROQ_API_KEY`.
+3. Redeploy. *(En local, `npx serve` no ejecuta funciones; verás las plantillas. Usa `vercel dev` para probar la IA localmente.)*
+
 ---
 
 ## Datos y contrato de API
@@ -188,7 +197,8 @@ El frontend resuelve la fuente por **prioridad automática**: `live_state.json` 
 | **UI** | React 18 (UMD) + JSX compilado en el navegador con Babel Standalone |
 | **Mapa** | Leaflet 1.9 · tiles CartoDB Dark Matter |
 | **Datos en vivo** | Open-Meteo API (gratis, sin API key) |
-| **Hosting** | Vercel (estático) |
+| **IA (recomendaciones)** | Groq (Llama 3.3) vía función serverless de Vercel |
+| **Hosting** | Vercel (estático + serverless `/api`) |
 | **Backend (equipo)** | Railway → expone `live_state.json` con CORS |
 
 ---
@@ -214,7 +224,10 @@ Abre **http://localhost:3000**.
 ```
 hack-conciencia/
 ├── index.html / FloodSense.html   Entrada + todo el CSS (idénticos; index.html sirve a Vercel)
-├── vercel.json                    Configuración de deploy estático
+├── vercel.json                    Configuración de deploy (static + serverless)
+├── .env.example                   Variables de entorno (GROQ_API_KEY)
+├── api/
+│   └── recommendations.js         Serverless: recomendaciones por LLM (Groq) con fallback
 ├── js/
 │   ├── geo.jsx        Modelo hidrológico, ZONES, malla de hexágonos, fetch de datos reales
 │   ├── map.jsx        Mapa Leaflet + overlay de hexágonos + ficha de zona
@@ -235,8 +248,8 @@ hack-conciencia/
 - [x] Lluvia real y espacial (Open-Meteo, 20 puntos)
 - [x] Alertas con recomendaciones generadas por reglas
 - [x] Sección de transparencia / confianza del modelo
+- [x] Recomendaciones redactadas por un LLM (Groq) con fallback a reglas
 - [ ] **Backend (Railway):** mini-BD + ingesta → `live_state.json` con `vuln` (INEGI) y pluviómetros (SACMEX)
-- [ ] Recomendaciones redactadas por un LLM (en vez de plantillas)
 - [ ] Susceptibilidad real desde DEM (HAND/TWI vía Google Earth Engine)
 - [ ] Confianza derivada de incertidumbre real (validación LOO-CV) + migración a H3
 
