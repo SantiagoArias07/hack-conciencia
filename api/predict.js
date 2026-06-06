@@ -8,7 +8,7 @@
 // ============================================================
 
 const PREDICT_URL = process.env.BACKEND_PREDICT_URL
-  || "https://hackatonagentes-conciencia-production.up.railway.app/predict";
+  || "https://hackatonagentesconciencia-production.up.railway.app/predict";
 
 export default async function handler(req, res) {
   res.setHeader("cache-control", "no-store");
