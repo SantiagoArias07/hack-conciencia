@@ -299,7 +299,7 @@ function AlertasSection({ onNav, modelState, rainMmh, liveZoneRain }) {
 
   // LLM payload from the live model state (mapea al esquema del system prompt)
   const buildPayload = () => {
-    const zonas = (modelState && modelState.zoneScores ? modelState.zoneScores : []).slice(0, 8).map((z) => ({
+    const zonas = (modelState && modelState.zoneScores ? modelState.zoneScores : []).slice(0, 12).map((z) => ({
       zona: z.zone.short,
       alcaldia: z.zone.name,
       nivel_riesgo: nivelFromScore(z.score),
@@ -387,59 +387,69 @@ function AlertasSection({ onNav, modelState, rainMmh, liveZoneRain }) {
         {/* ---- CIUDADANÍA tab ---- */}
         {tab === "ciudadanos" && (
           <React.Fragment>
-            {aiStatus === "ok" && ai.ciudadanos && ai.ciudadanos.length > 0 && (
+            <div className="al-intro-banner glass" style={{marginBottom:20,padding:"14px 18px",borderLeft:"4px solid var(--cyan)",borderRadius:"0 14px 14px 0"}}>
+              <div style={{fontSize:12.5,fontWeight:600,color:"var(--ink)",marginBottom:4}}>Qué hacer si estás en una zona de riesgo</div>
+              <div style={{fontSize:12,color:"var(--ink-3)",lineHeight:1.55}}>Evita circular por pasos a desnivel y avenidas inundables. No cruces corrientes de agua en movimiento. Sigue las indicaciones de Protección Civil.</div>
+            </div>
+
+            {aiStatus === "ok" && ai.ciudadanos && ai.ciudadanos.length > 0 ? (
+              /* IA disponible → SOLO tarjetas de IA */
               <div className="ai-citizen-wrap">
                 {ai.ciudadanos.map((c, i) => {
                   const col = c.nivel >= 4 ? "var(--red)" : c.nivel >= 3 ? "var(--orange)" : "var(--cyan)";
+                  const bg  = c.nivel >= 4 ? "rgba(239,68,68,.14)" : c.nivel >= 3 ? "rgba(249,115,22,.14)" : "rgba(0,212,255,.12)";
+                  const nlabel = c.nivel >= 4 ? "Alto" : c.nivel >= 3 ? "Medio" : "Bajo";
                   const emoji = c.nivel >= 4 ? "🔴" : c.nivel >= 3 ? "🟠" : "🔵";
                   return (
                     <div className="ai-citizen-card glass" key={i} style={{ borderLeft: `4px solid ${col}` }}>
                       <span className="ai-cc-emoji">{emoji}</span>
-                      <div>
-                        <div className="ai-cc-zone">{c.zona}</div>
+                      <div style={{ minWidth: 0 }}>
+                        <div className="ai-cc-zone">{c.zona}<span className="ai-cc-tag" style={{ color: col, background: bg }}>{nlabel}</span></div>
+                        {c.titulo && <div className="ai-cc-title">{c.titulo}</div>}
                         <div className="ai-cc-msg">{c.mensaje}</div>
+                        <button className="al-link" style={{ marginTop: 8 }} onClick={() => onNav("simulador")}>Ver en mapa →</button>
                       </div>
                     </div>
                   );
                 })}
               </div>
-            )}
-            <div className="al-intro-banner glass" style={{marginBottom:20,padding:"14px 18px",borderLeft:"4px solid var(--cyan)",borderRadius:"0 14px 14px 0"}}>
-              <div style={{fontSize:12.5,fontWeight:600,color:"var(--ink)",marginBottom:4}}>Qué hacer si estás en una zona de riesgo</div>
-              <div style={{fontSize:12,color:"var(--ink-3)",lineHeight:1.55}}>Evita circular por pasos a desnivel y avenidas inundables. No cruces corrientes de agua en movimiento. Sigue las indicaciones de Protección Civil.</div>
-            </div>
-            <div className="al-controls">
-              <div className="al-pills">
-                {pills.map((p) => (
-                  <button key={p.k}
-                    className={"al-pill" + (filter === p.k ? " on" : "") + (p.k ? " l" + p.k : "")}
-                    onClick={() => setFilter(p.k)}>{p.t}</button>
-                ))}
-              </div>
-              <div className="al-search">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2"/><path d="M20 20l-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar colonia..." />
-              </div>
-            </div>
-            <div className="al-grid">
-              {list.map((c, i) => {
-                const b = LV_BADGE[c.level];
-                return (
-                  <div className={"al-card glass " + b.c} key={i}>
-                    <div className="al-card-top">
-                      <div><div className="al-name">{c.name}</div><div className="al-alc">{c.alcaldia}</div></div>
-                      <span className={"al-badge " + b.c}>{b.t}</span>
-                    </div>
-                    <div className="al-factor">{c.factor}</div>
-                    <div className="al-foot">
-                      <span className="al-time mono">hace {c.min} min</span>
-                      <button className="al-link" onClick={() => onNav("simulador")}>Ver en mapa →</button>
-                    </div>
+            ) : (
+              /* sin IA → plantillas por colonia con filtros */
+              <React.Fragment>
+                <div className="al-controls">
+                  <div className="al-pills">
+                    {pills.map((p) => (
+                      <button key={p.k}
+                        className={"al-pill" + (filter === p.k ? " on" : "") + (p.k ? " l" + p.k : "")}
+                        onClick={() => setFilter(p.k)}>{p.t}</button>
+                    ))}
                   </div>
-                );
-              })}
-              {list.length === 0 && <div className="al-empty mono">Sin resultados para "{q}".</div>}
-            </div>
+                  <div className="al-search">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2"/><path d="M20 20l-3.5-3.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                    <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar colonia..." />
+                  </div>
+                </div>
+                <div className="al-grid">
+                  {list.map((c, i) => {
+                    const b = LV_BADGE[c.level];
+                    return (
+                      <div className={"al-card glass " + b.c} key={i}>
+                        <div className="al-card-top">
+                          <div><div className="al-name">{c.name}</div><div className="al-alc">{c.alcaldia}</div></div>
+                          <span className={"al-badge " + b.c}>{b.t}</span>
+                        </div>
+                        <div className="al-factor">{c.factor}</div>
+                        <div className="al-foot">
+                          <span className="al-time mono">hace {c.min} min</span>
+                          <button className="al-link" onClick={() => onNav("simulador")}>Ver en mapa →</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {list.length === 0 && <div className="al-empty mono">Sin resultados para "{q}".</div>}
+                </div>
+              </React.Fragment>
+            )}
           </React.Fragment>
         )}
 
@@ -447,7 +457,7 @@ function AlertasSection({ onNav, modelState, rainMmh, liveZoneRain }) {
         {tab === "autoridades" && (
           <React.Fragment>
             <div className="al-intro-banner glass" style={{marginBottom:24,padding:"14px 18px",borderLeft:"4px solid var(--orange)",borderRadius:"0 14px 14px 0"}}>
-              <div style={{fontSize:12.5,fontWeight:600,color:"var(--ink)",marginBottom:4}}>{aiStatus === "ok" ? "Recomendaciones redactadas por IA (Groq)" : "Recomendaciones por reglas"} · basadas en el modelo hidrológico actual</div>
+              <div style={{fontSize:12.5,fontWeight:600,color:"var(--ink)",marginBottom:4}}>{(aiStatus === "ok" && ai.autoridades && ai.autoridades.length) ? "Recomendaciones redactadas por IA (Groq)" : "Recomendaciones por reglas"} · basadas en el modelo hidrológico actual</div>
               <div style={{fontSize:12,color:"var(--ink-3)",lineHeight:1.55}}>Acciones preventivas derivadas del análisis del riesgo compuesto ({modelState ? modelState.composite : "—"}/100). Ordene por ventana de acción para priorizar.</div>
             </div>
 
