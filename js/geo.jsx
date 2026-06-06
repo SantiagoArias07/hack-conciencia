@@ -104,9 +104,20 @@ const SCEN = {
   pesimista: { mult: 1.42, label: "Pesimista", desc: "P90" },
 };
 
-function hexRisk(hex, rainMmh, hour, scenKey) {
+// ---- Simulation parameter multipliers ----
+const DRAIN_MULT  = { excelente: 0.62, bueno: 0.80, basico: 1.00, deficiente: 1.42 };
+const SOIL_MULT   = { seco: 0.68, normal: 1.00, saturado: 1.48 };
+const CANAL_MULT  = { normal: 1.00, elevado: 1.22, critico: 1.60 };
+
+// simParams: { drainage, soilSat, canalLevel } — null = defaults
+function hexRisk(hex, rainMmh, hour, scenKey, simParams) {
+  const dp = simParams || {};
+  const drainM = DRAIN_MULT[dp.drainage   || "basico"]    || 1;
+  const soilM  = SOIL_MULT[dp.soilSat     || "normal"]    || 1;
+  const canalM = CANAL_MULT[dp.canalLevel || "normal"]    || 1;
+
   const scen = SCEN[scenKey] || SCEN.esperado;
-  const effRain = rainMmh * scen.mult;
+  const effRain = rainMmh * scen.mult * drainM * soilM * canalM;
   const rainF = effRain / (effRain + 22);
   const k = 0.34 + 0.44 * hex.sus;
   const timeF = 0.70 + 0.30 * (1 - Math.exp(-hour * k));
@@ -134,13 +145,13 @@ function hexFill(r) {
   return `rgba(239,68,68,${Math.min(0.92, a).toFixed(3)})`;
 }
 
-function computeState(rainMmh, hour, scenKey) {
+function computeState(rainMmh, hour, scenKey, simParams) {
   const risks = new Float32Array(HEXES.length);
   const zoneAgg = {};
   let cityNum = 0, cityDen = 0;
   for (let i = 0; i < HEXES.length; i++) {
     const h = HEXES[i];
-    const r = hexRisk(h, rainMmh, hour, scenKey);
+    const r = hexRisk(h, rainMmh, hour, scenKey, simParams);
     risks[i] = r;
     if (h.edgeFade <= 0.02) continue;
     const w = 0.6 + 0.4 * h.vuln;
@@ -183,13 +194,68 @@ const COLONIAS = [
 
 const CONF_COLORS = ["#34d399", "#fbbf24", "#fb923c"];
 const CONF_NAMES  = ["Datos reales", "Datos inferidos", "Alta incertidumbre"];
-
 const MAP_CENTER = [19.40, -99.10];
 const MAP_ZOOM   = 11;
+
+// ---- Live weather: Open-Meteo (gratis, sin API key, datos de modelos globales que incluyen SMN) ----
+const OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast?latitude=19.4326&longitude=-99.1332&current=temperature_2m,apparent_temperature,precipitation,rain,weather_code,wind_speed_10m,relative_humidity_2m,surface_pressure&hourly=precipitation,temperature_2m,weather_code&forecast_days=2&timezone=America%2FMexico_City";
+
+const WX_CODES = {
+  0:"Despejado",1:"Mayormente despejado",2:"Parcialmente nublado",3:"Nublado",
+  45:"Niebla",48:"Niebla con escarcha",51:"Llovizna ligera",53:"Llovizna",55:"Llovizna intensa",
+  56:"Llovizna helada",57:"Llovizna helada",61:"Lluvia ligera",63:"Lluvia moderada",65:"Lluvia fuerte",
+  66:"Lluvia helada",67:"Lluvia helada",71:"Nieve ligera",73:"Nieve",75:"Nieve intensa",77:"Aguanieve",
+  80:"Chubascos ligeros",81:"Chubascos",82:"Chubascos violentos",85:"Chubascos de nieve",86:"Chubascos de nieve",
+  95:"Tormenta eléctrica",96:"Tormenta con granizo",99:"Tormenta con granizo",
+};
+function wxLabel(code){ return WX_CODES[code] != null ? WX_CODES[code] : "—"; }
+
+async function fetchLiveWeather() {
+  const res = await fetch(OPEN_METEO_URL);
+  if (!res.ok) throw new Error("Open-Meteo HTTP " + res.status);
+  const d = await res.json();
+  const cur = d.current || {};
+  const hourly = d.hourly || {};
+  const times = hourly.time || [];
+  // current.time may carry minutes (e.g. 20:15) while hourly is on the hour (20:00);
+  // match by the "YYYY-MM-DDTHH" prefix
+  const curHourKey = (cur.time || "").slice(0, 13);
+  let idx = times.findIndex((t) => t.slice(0, 13) === curHourKey);
+  if (idx < 0) idx = 0;
+  const precip = hourly.precipitation || [];
+  const temps  = hourly.temperature_2m || [];
+  const codes  = hourly.weather_code || [];
+  const forecast = [];
+  for (let k = 1; k <= 6; k++) {
+    const j = idx + k;
+    forecast.push({ precip: precip[j] != null ? precip[j] : 0, temp: Math.round(temps[j] || 0), code: codes[j] });
+  }
+  return {
+    temp: Math.round(cur.temperature_2m),
+    feels: Math.round(cur.apparent_temperature),
+    precip: cur.precipitation != null ? cur.precipitation : 0,
+    rain: cur.rain != null ? cur.rain : 0,
+    wind: Math.round(cur.wind_speed_10m),
+    humidity: Math.round(cur.relative_humidity_2m),
+    pressure: Math.round(cur.surface_pressure),
+    code: cur.weather_code,
+    cond: wxLabel(cur.weather_code),
+    forecast,
+  };
+}
+
+// Exposed for use in Alertas authority recommendations
+const SIM_PARAMS_META = {
+  drainage:   { label: "Alcantarillado",       opts: [{ k:"excelente",c:"#22c55e" },{ k:"bueno",c:"#3b82f6" },{ k:"basico",c:"#f59e0b" },{ k:"deficiente",c:"#ef4444" }], labels:["Excelente","Bueno","Básico","Deficiente"] },
+  soilSat:    { label: "Saturación del suelo", opts: [{ k:"seco",c:"#f59e0b" },{ k:"normal",c:"#3b82f6" },{ k:"saturado",c:"#ef4444" }], labels:["Seco","Normal","Saturado"] },
+  canalLevel: { label: "Nivel en cauces",      opts: [{ k:"normal",c:"#22c55e" },{ k:"elevado",c:"#f97316" },{ k:"critico",c:"#ef4444" }], labels:["Normal","Elevado","Crítico"] },
+};
 
 window.FloodGeo = {
   BOUNDS, WORLD_ASPECT, toWorld, ZONES, HEXES,
   hexRisk, riskLevel, hexFill, computeState,
   LEVEL_NAMES, LEVEL_COLORS, SCEN,
   COLONIAS, CONF_COLORS, CONF_NAMES, MAP_CENTER, MAP_ZOOM,
+  DRAIN_MULT, SOIL_MULT, CANAL_MULT, SIM_PARAMS_META,
+  fetchLiveWeather, wxLabel,
 };
