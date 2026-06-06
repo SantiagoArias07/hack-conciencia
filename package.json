@@ -2,6 +2,7 @@
   "name": "floodsense",
   "version": "0.1.0",
   "description": "AI-powered urban flood risk simulator for CDMX",
+  "type": "module",
   "scripts": {
     "dev": "npx serve . --listen 3000 --no-clipboard",
     "start": "npx serve . --listen 3000"
