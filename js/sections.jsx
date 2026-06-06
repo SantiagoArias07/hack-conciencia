@@ -330,7 +330,11 @@ function AlertasSection({ onNav, modelState, ai, aiStatus, onRegen }) {
     </div>
   );
   const emptyState = (
-    <div className="ai-empty mono">Sin alertas activas en este momento.</div>
+    <div className="ai-empty">
+      <span className="ai-empty-ico">🌤️</span>
+      <div className="ai-empty-t">Sin alertas activas</div>
+      <div className="ai-empty-s">No se prevé riesgo significativo ahora. Las recomendaciones por IA aparecen automáticamente cuando sube el riesgo — simula una tormenta en el Simulador o cuando llegue lluvia real.</div>
+    </div>
   );
 
   const aiBar = (

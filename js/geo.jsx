@@ -2,10 +2,11 @@
 // FloodSense — geo, projection, hex grid & hydrological risk model
 // ============================================================
 
-// ---- Backend ML externo (AquaInfer · Railway) ----
-// null = usar fallback automático (Open-Meteo + modelo simulado).
-// Cuando exista la URL de Railway, cambiar SOLO esta constante para activarlo:
-const BACKEND_URL = "https://hackatonagentes-conciencia-production.up.railway.app/predict";
+// ---- Backend ML externo (AquaInfer · Railway), vía proxy de Vercel ----
+// Apunta al proxy /api/predict (mismo origen → SIN CORS). El proxy llama a Railway
+// server-to-server y devuelve { ok, zones }. Si Railway no está vivo → fallback automático.
+// null = desactivar por completo (ni siquiera intenta).
+const BACKEND_URL = "/api/predict";
 
 const BOUNDS = { minLng: -99.46, maxLng: -98.82, minLat: 19.12, maxLat: 19.61 };
 const LAT0 = (BOUNDS.minLat + BOUNDS.maxLat) / 2;

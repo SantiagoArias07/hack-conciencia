@@ -127,31 +127,21 @@ function App() {
     [realRain, liveZoneRain]
   );
 
-  // Alertas = riesgo PREVISTO para las próximas horas: usa el pico del pronóstico
-  // (o la lluvia simulada si es mayor), no el instantáneo — así son útiles aunque ahora no llueva.
-  const forecastPeak = (liveWx && liveWx.forecast && liveWx.forecast.length)
-    ? Math.max(0, ...liveWx.forecast.map((f) => f.precip || 0))
-    : 0;
-  const alertRain = Math.max(rainMmh || 0, forecastPeak);
-  const alertState = React.useMemo(
-    () => Ga.computeState(alertRain, 3, scenario, simParams, null),
-    [alertRain, scenario, simMode, drainage, soilSat, canalLevel]
-  );
-
-  // payload enriquecido para el LLM (incluye elevación y susceptibilidad por zona)
+  // Las alertas usan el MISMO riesgo que ves en el mapa (modelState):
+  // en simulación = el escenario actual; en EN VIVO con backend = riesgo real ML.
   const buildRecsPayload = () => {
     const nivel = (s) => s >= 80 ? 5 : s >= 60 ? 4 : s >= 40 ? 3 : s >= 20 ? 2 : 1;
-    const zs = (alertState && alertState.zoneScores) ? alertState.zoneScores : [];
+    const zs = (modelState && modelState.zoneScores) ? modelState.zoneScores : [];
     const zonas = zs.slice(0, 14).map((z) => ({
       zona: z.zone.short,
       alcaldia: z.zone.name,
       nivel_riesgo: nivel(z.score),
       vuln: Math.round(z.zone.vuln * 100) / 100,
-      rain_mmh: Math.round(alertRain * 10) / 10,
+      rain_mmh: Math.round((rainMmh || 0) * 10) / 10,
       elevacion_m: z.zone.elev,
       susceptibilidad_fisica: Math.round(z.zone.sus * 100) / 100,
     }));
-    return { contexto: { indice_compuesto: alertState ? alertState.composite : 0, lluvia_prevista_mmh: Math.round(alertRain) }, zonas };
+    return { contexto: { indice_compuesto: modelState ? modelState.composite : 0, lluvia_mmh: Math.round(rainMmh || 0) }, zonas };
   };
 
   const fetchRecs = () => {
@@ -162,9 +152,10 @@ function App() {
     })
       .then((r) => r.json())
       .then((d) => {
-        if (d && d.ok && ((d.ciudadanos && d.ciudadanos.length) || (d.autoridades && d.autoridades.length))) {
-          setAiRecs(d); setAiRecsStatus("ok");
-        } else { setAiRecsStatus("fallback"); }
+        // ok=true (aunque las listas vengan vacías por bajo riesgo) → estado "ok"
+        // (la UI muestra "sin alertas"). Las plantillas SOLO ante fallo real de la API.
+        if (d && d.ok) { setAiRecs(d); setAiRecsStatus("ok"); }
+        else { setAiRecsStatus("fallback"); }
       })
       .catch(() => setAiRecsStatus("fallback"));
   };
@@ -293,7 +284,7 @@ function App() {
 
         {/* ---- ALERTAS ---- */}
         {section === "alertas" && (
-          <AlertasSection onNav={setSection} modelState={alertState}
+          <AlertasSection onNav={setSection} modelState={modelState}
             ai={aiRecs} aiStatus={aiRecsStatus} onRegen={fetchRecs} />
         )}
 
