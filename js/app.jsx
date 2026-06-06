@@ -149,7 +149,8 @@ function App() {
   };
 
   const onShare = () => {
-    setToast({ stage: "done", msg: "Enlace de alerta copiado al portapapeles." });
+    try { navigator.clipboard.writeText(window.location.href); } catch (e) { /* noop */ }
+    setToast({ stage: "done", msg: "Enlace de la app copiado al portapapeles." });
     setTimeout(() => setToast(null), 2500);
   };
 

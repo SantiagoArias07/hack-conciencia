@@ -56,7 +56,7 @@ function Navbar({ active, onNav, onShare }) {
           <div className="live-chip"><span className="live" /><span className="mono">EN VIVO</span><span className="mono nclk">{clock}</span></div>
           <button className="btn-share" onClick={onShare}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M12 3v13M7 8l5-5 5 5" stroke="#021016" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            Compartir alerta
+            Compartir app
           </button>
         </div>
       </nav>
