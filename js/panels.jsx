@@ -145,9 +145,10 @@ function LeftPanel({ rainMmh, condMode, setCondMode, scenario, hour, liveWx, wxS
 }
 
 /* ===================== PARAM PICKER ===================== */
-function ParamPicker({ options, labels, colors, value, onChange, locked }) {
+// Always clickable — picking a value calls onChange, which drops the app out of EN VIVO.
+function ParamPicker({ options, labels, colors, value, onChange }) {
   return (
-    <div className={"param-picker" + (locked ? " locked" : "")}>
+    <div className="param-picker">
       {options.map((opt, i) => {
         const active = value === opt;
         const col = colors ? colors[i] : "var(--cyan)";
@@ -155,8 +156,7 @@ function ParamPicker({ options, labels, colors, value, onChange, locked }) {
           <button key={opt}
             className={"pp-btn" + (active ? " on" : "")}
             style={active ? { color: col, borderColor: col, background: col + "1a" } : {}}
-            onClick={() => !locked && onChange(opt)}
-            disabled={locked}>
+            onClick={() => onChange(opt)}>
             {labels[i]}
           </button>
         );
@@ -188,7 +188,7 @@ function ArcGauge({ value }) {
 }
 
 /* ===================== RIGHT PANEL — SIMULATION PARAMS ===================== */
-function RightPanel({ rainMmh, setRain, isManual, condMode, modelState, playing, onSimulate, simMode, drainage, setDrainage, soilSat, setSoilSat, canalLevel, setCanalLevel }) {
+function RightPanel({ rainMmh, setRain, isManual, condMode, modelState, playing, onSimulate, simMode, zoneSrc, drainage, setDrainage, soilSat, setSoilSat, canalLevel, setCanalLevel }) {
   const locked = simMode === "realtime";
   const comp = modelState.composite;
   const compLabel = comp >= 72
@@ -223,15 +223,12 @@ function RightPanel({ rainMmh, setRain, isManual, condMode, modelState, playing,
           <div className="slider-wrap">
             <input type="range" className="rng" min="0" max="100" step="1" value={rainMmh}
               style={{ "--p": rainMmh + "%" }}
-              onChange={(e) => setRain(parseFloat(e.target.value))}
-              disabled={locked} />
+              onChange={(e) => setRain(parseFloat(e.target.value))} />
             <div className="rng-scale mono"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
             <div className="rng-mode">
               {locked
-                ? <React.Fragment>Sincronizado con condiciones en vivo</React.Fragment>
-                : isManual
-                ? <React.Fragment><span className="b">● Simulación manual</span></React.Fragment>
-                : <React.Fragment>Valor en tiempo real</React.Fragment>}
+                ? <React.Fragment><span className="b" style={{ color: "var(--green)" }}>● En vivo</span> · {zoneSrc === "equipo" ? "datos del equipo" : "Open-Meteo · 20 puntos"}</React.Fragment>
+                : <React.Fragment><span className="b">● Modo simulación</span> · ajusta libremente</React.Fragment>}
             </div>
           </div>
         </div>

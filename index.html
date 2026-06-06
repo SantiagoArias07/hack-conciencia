@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>FloodSense — Simulador de riesgo de inundación · CDMX</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2.5c0 0 7 7.2 7 12.1A7 7 0 1 1 5 14.6C5 9.7 12 2.5 12 2.5Z' fill='%2300d4ff' stroke='%2300d4ff' stroke-width='1'/%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -274,7 +275,9 @@ input[type=range].rng::-moz-range-thumb{width:18px;height:18px;border-radius:50%
 
 /* ---- map overlays ---- */
 .lmap-wrap{position:absolute;inset:0}
-.lmap{width:100%;height:100%}
+/* trap Leaflet's internal panes (z-index 200-700) in their own stacking context
+   so they never cover our map overlays (legend/EN VIVO/scenarios/tooltip) */
+.lmap{width:100%;height:100%;position:relative;z-index:0}
 .leaflet-container{background:#070b13 !important}
 .leaflet-control-attribution{font-size:9px;opacity:.4;background:transparent !important;color:var(--ink-4) !important}
 .hexpoly{transition:fill .28s ease,stroke .28s ease}
@@ -693,11 +696,11 @@ input[type=range].rng::-moz-range-thumb{width:18px;height:18px;border-radius:50%
   /* scrollable sections clear the bottom nav */
   .section{padding-bottom:74px}
 
-  /* simulador: stack map + switchable panels */
-  .sec-simulador{flex-direction:column;overflow-y:auto;overflow-x:hidden;padding-bottom:66px}
-  .col-map{order:1;flex:0 0 auto;height:46vh;width:100%;border:none}
+  /* simulador: fixed map on top (controls always visible) + panel scrolls internally */
+  .sec-simulador{flex-direction:column;overflow:hidden}
+  .col-map{order:1;flex:0 0 44vh;height:44vh;width:100%;border:none}
   .mobile-sim-tabs{
-    order:2;display:flex;gap:6px;padding:10px 14px;
+    order:2;flex:0 0 auto;display:flex;gap:6px;padding:9px 12px;
     background:var(--bg);border-bottom:1px solid var(--line);
   }
   .mobile-sim-tabs button{
@@ -706,15 +709,19 @@ input[type=range].rng::-moz-range-thumb{width:18px;height:18px;border-radius:50%
     padding:9px;cursor:pointer;transition:.15s;
   }
   .mobile-sim-tabs button.on{background:rgba(0,212,255,.12);border-color:rgba(0,212,255,.4);color:var(--cyan)}
-  .col-left,.col-right{order:3;width:100%;flex:0 0 auto;border:none;border-top:1px solid var(--line)}
+  .col-left,.col-right{order:3;width:100%;flex:1 1 auto;min-height:0;border:none}
   .col-left.mob-hidden,.col-right.mob-hidden{display:none}
-  .col-left .scroll,.col-right .scroll{flex:none!important;overflow:visible!important}
+  .col-left .scroll,.col-right .scroll{padding-bottom:72px}
 
-  /* declutter map overlays */
-  .legend,.map-status{display:none}
-  .hexinfo{top:52px;left:10px;bottom:auto;width:180px}
-  .timebar{width:calc(100% - 24px);min-width:0;bottom:14px;padding:12px 14px 11px}
-  .simbar{top:10px;padding:7px 10px;gap:8px}
+  /* keep map controls usable; compact legend, hide the tech chip */
+  .map-status{display:none}
+  .legend{top:10px;right:10px;padding:7px 9px}
+  .legend .lh{display:none}
+  .legend .lrow{font-size:9.5px;padding:1.5px 0}
+  .legend .lsw{width:10px;height:10px}
+  .hexinfo{top:48px;left:10px;bottom:auto;width:172px;padding:11px 12px}
+  .timebar{width:calc(100% - 20px);min-width:0;bottom:12px;padding:11px 13px 10px}
+  .simbar{top:9px;padding:6px 9px;gap:7px}
   .simbar-hint{display:none}
 
   /* tighter section paddings */

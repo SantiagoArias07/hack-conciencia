@@ -14,10 +14,14 @@ function App() {
   const [soilSat,     setSoilSat]    = React.useState("normal");
   const [canalLevel,  setCanalLevel] = React.useState("normal");
 
-  // rain & conditions (rain starts at 0 until live data arrives, so "real" = real)
-  const [rainMmh,     setRainMmh]    = React.useState(0);
+  // rain & conditions. Default is a moderate SIMULATION (map alive); EN VIVO switches to real.
+  const [rainMmh,     setRainMmh]    = React.useState(35);
   const [isManual,    setIsManual]   = React.useState(false);
   const [condMode,    setCondMode]   = React.useState("real");
+
+  // real spatial rain per zone (teammate JSON or Open-Meteo multi-point)
+  const [liveZoneRain, setLiveZoneRain] = React.useState(null);
+  const [zoneSrc,      setZoneSrc]      = React.useState("");
 
   // animation
   const [hour,        setHour]       = React.useState(0);
@@ -40,42 +44,55 @@ function App() {
   const playRef = React.useRef(0);
   const lastTs  = React.useRef(0);
 
-  // fetch live weather on mount + refresh every 5 min
+  // fetch live data on mount + refresh every 5 min
   React.useEffect(() => {
     let alive = true;
     const load = () => {
+      // 1-point detail for the weather widget + 6h forecast
       Ga.fetchLiveWeather()
         .then((w) => { if (alive) { setLiveWx(w); setWxStatus("ok"); } })
         .catch(() => { if (alive) setWxStatus("error"); });
+      // spatial rain per zone: prefer teammate JSON, fallback to Open-Meteo multi-point
+      Ga.fetchLiveState()
+        .then((s) => { if (alive) { setLiveZoneRain(s.rain); setZoneSrc("equipo"); } })
+        .catch(() => Ga.fetchZoneRain()
+          .then((z) => { if (alive) { setLiveZoneRain(z); setZoneSrc("open-meteo"); } })
+          .catch(() => {}));
     };
     load();
     const id = setInterval(load, 5 * 60 * 1000);
     return () => { alive = false; clearInterval(id); };
   }, []);
 
-  // sync rain to REAL live precipitation whenever on real conditions and not manually overridden
+  // EN VIVO: drive the global rain number from the real spatial average
   React.useEffect(() => {
-    if (condMode === "real" && !isManual && liveWx) {
+    if (simMode !== "realtime") return;
+    if (liveZoneRain) {
+      const cdmx = Ga.ZONES.filter((z) => !z.edo).map((z) => liveZoneRain[z.name] || 0);
+      const avg = cdmx.length ? cdmx.reduce((a, b) => a + b, 0) / cdmx.length : 0;
+      setRainMmh(Math.round(avg * 10) / 10);
+    } else if (liveWx) {
       setRainMmh(Math.round((liveWx.precip || 0) * 10) / 10);
     }
-  }, [condMode, isManual, liveWx]);
+    setIsManual(false);
+  }, [simMode, liveZoneRain, liveWx]);
 
   // build simParams only when in manual mode
   const simParams = simMode === "manual"
     ? { drainage, soilSat, canalLevel }
     : null;
 
+  // spatial rain only feeds the model in EN VIVO (real); manual mode is uniform
+  const zoneRain = simMode === "realtime" ? liveZoneRain : null;
+
   const modelState = React.useMemo(
-    () => Ga.computeState(rainMmh, hour, scenario, simParams),
-    [rainMmh, hour, scenario, simMode, drainage, soilSat, canalLevel]
+    () => Ga.computeState(rainMmh, hour, scenario, simParams, zoneRain),
+    [rainMmh, hour, scenario, simMode, drainage, soilSat, canalLevel, liveZoneRain]
   );
 
-  const onSetRain = (v) => { setRainMmh(v); setIsManual(true); };
-  const onSetCond = (m) => {
-    setCondMode(m); setIsManual(false);
-    if (m === "hist") setRainMmh(12);
-    else setRainMmh(liveWx ? Math.round((liveWx.precip || 0) * 10) / 10 : 0);
-  };
+  // editing rain or any param drops out of EN VIVO into Simulación
+  const onSetRain = (v) => { setRainMmh(v); setIsManual(true); setSimMode("manual"); };
+  const onSetCond = (m) => { setCondMode(m); };
 
   // EN VIVO toggle: realtime locks params + follows live real data
   const onSetSimMode = (m) => {
@@ -174,7 +191,7 @@ function App() {
                 rainMmh={rainMmh} setRain={onSetRain} isManual={isManual}
                 condMode={condMode} modelState={modelState}
                 playing={playing} onSimulate={togglePlay}
-                simMode={simMode}
+                simMode={simMode} zoneSrc={zoneSrc}
                 drainage={drainage}    setDrainage={setDrainageM}
                 soilSat={soilSat}      setSoilSat={setSoilSatM}
                 canalLevel={canalLevel} setCanalLevel={setCanalLevelM}

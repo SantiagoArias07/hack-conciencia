@@ -1,0 +1,27 @@
+{
+  "_README": "CONTRATO frontend <-> backend. El equipo de backend genera ESTE archivo (renombrado a 'live_state.json') y lo publica en la raíz del sitio (o en una URL que el frontend consuma). El frontend hace fetch('live_state.json'); si existe lo usa, si no, cae a Open-Meteo automáticamente. Los nombres de 'zones' DEBEN coincidir exactamente con los de ZONES en js/geo.jsx.",
+  "updated": "2026-06-05T20:30:00-06:00",
+  "source": "SACMEX pluviometros + INEGI + modelo del equipo",
+  "zones": {
+    "Iztapalapa":          { "rain_mmh": 14.2, "soil_sat": "saturado", "conf": 0 },
+    "Tláhuac":             { "rain_mmh": 11.0, "soil_sat": "saturado", "conf": 1 },
+    "Venustiano Carranza": { "rain_mmh": 9.5,  "soil_sat": "normal",   "conf": 0 },
+    "Iztacalco":           { "rain_mmh": 10.1, "soil_sat": "normal",   "conf": 0 },
+    "Xochimilco":          { "rain_mmh": 8.0,  "soil_sat": "saturado", "conf": 1 },
+    "Gustavo A. Madero":   { "rain_mmh": 7.2,  "soil_sat": "normal",   "conf": 0 },
+    "Cuauhtémoc":          { "rain_mmh": 6.0,  "soil_sat": "normal",   "conf": 0 },
+    "Benito Juárez":       { "rain_mmh": 5.1,  "soil_sat": "seco",     "conf": 0 },
+    "Coyoacán":            { "rain_mmh": 4.0,  "soil_sat": "normal",   "conf": 0 },
+    "Álvaro Obregón":      { "rain_mmh": 4.6,  "soil_sat": "normal",   "conf": 1 },
+    "Tlalpan":             { "rain_mmh": 3.2,  "soil_sat": "seco",     "conf": 0 },
+    "Magdalena Contreras": { "rain_mmh": 3.0,  "soil_sat": "seco",     "conf": 1 },
+    "Cuajimalpa":          { "rain_mmh": 2.4,  "soil_sat": "seco",     "conf": 1 },
+    "Miguel Hidalgo":      { "rain_mmh": 5.0,  "soil_sat": "normal",   "conf": 0 },
+    "Azcapotzalco":        { "rain_mmh": 6.8,  "soil_sat": "normal",   "conf": 0 },
+    "Milpa Alta":          { "rain_mmh": 2.0,  "soil_sat": "seco",     "conf": 2 },
+    "Nezahualcóyotl":      { "rain_mmh": 13.0, "soil_sat": "saturado", "conf": 1 },
+    "Ecatepec":            { "rain_mmh": 12.1, "soil_sat": "saturado", "conf": 1 },
+    "Chimalhuacán":        { "rain_mmh": 11.5, "soil_sat": "saturado", "conf": 2 },
+    "Naucalpan":           { "rain_mmh": 4.2,  "soil_sat": "normal",   "conf": 1 }
+  }
+}

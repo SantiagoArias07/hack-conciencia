@@ -39,8 +39,6 @@ function LeafletMap({ modelState, condMode, selected, onSelect }) {
       subdomains: "abcd", maxZoom: 19,
     }).addTo(map);
 
-    L.control.zoom({ position: "bottomleft" }).addTo(map);
-
     const layer = L.layerGroup().addTo(map);
     polysRef.current = G.HEXES.map((h) =>
       L.polygon(h.vertsLL, {

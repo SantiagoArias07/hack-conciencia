@@ -145,13 +145,15 @@ function hexFill(r) {
   return `rgba(239,68,68,${Math.min(0.92, a).toFixed(3)})`;
 }
 
-function computeState(rainMmh, hour, scenKey, simParams) {
+function computeState(rainMmh, hour, scenKey, simParams, zoneRain) {
   const risks = new Float32Array(HEXES.length);
   const zoneAgg = {};
   let cityNum = 0, cityDen = 0;
   for (let i = 0; i < HEXES.length; i++) {
     const h = HEXES[i];
-    const r = hexRisk(h, rainMmh, hour, scenKey, simParams);
+    // spatial rain: use the hex's zone live rain when available, else the global value
+    const hr = zoneRain && zoneRain[h.zone.name] != null ? zoneRain[h.zone.name] : rainMmh;
+    const r = hexRisk(h, hr, hour, scenKey, simParams);
     risks[i] = r;
     if (h.edgeFade <= 0.02) continue;
     const w = 0.6 + 0.4 * h.vuln;
@@ -210,6 +212,38 @@ const WX_CODES = {
 };
 function wxLabel(code){ return WX_CODES[code] != null ? WX_CODES[code] : "—"; }
 
+// ---- Multi-point real rain per ZONE (Open-Meteo, una sola llamada con N coordenadas) ----
+async function fetchZoneRain() {
+  const lats = ZONES.map((z) => z.lat).join(",");
+  const lngs = ZONES.map((z) => z.lng).join(",");
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lngs}&current=precipitation&timezone=America%2FMexico_City`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Open-Meteo multi HTTP " + res.status);
+  const data = await res.json();
+  const arr = Array.isArray(data) ? data : [data];
+  const out = {};
+  ZONES.forEach((z, i) => {
+    const c = arr[i] && arr[i].current;
+    out[z.name] = c && c.precipitation != null ? c.precipitation : 0;
+  });
+  return out;
+}
+
+// ---- Optional teammate feed (mini-DB → JSON). Contract:
+// { updated, zones: { "Iztapalapa": { rain_mmh, soil_sat?, conf? }, ... } }
+async function fetchLiveState(url) {
+  const res = await fetch(url || "live_state.json", { cache: "no-store" });
+  if (!res.ok) throw new Error("live_state.json no disponible");
+  const d = await res.json();
+  if (!d || !d.zones) throw new Error("live_state.json sin zones");
+  const rain = {};
+  for (const name in d.zones) {
+    const z = d.zones[name];
+    if (z && z.rain_mmh != null) rain[name] = z.rain_mmh;
+  }
+  return { rain, raw: d };
+}
+
 async function fetchLiveWeather() {
   const res = await fetch(OPEN_METEO_URL);
   if (!res.ok) throw new Error("Open-Meteo HTTP " + res.status);
@@ -257,5 +291,5 @@ window.FloodGeo = {
   LEVEL_NAMES, LEVEL_COLORS, SCEN,
   COLONIAS, CONF_COLORS, CONF_NAMES, MAP_CENTER, MAP_ZOOM,
   DRAIN_MULT, SOIL_MULT, CANAL_MULT, SIM_PARAMS_META,
-  fetchLiveWeather, wxLabel,
+  fetchLiveWeather, fetchZoneRain, fetchLiveState, wxLabel,
 };
