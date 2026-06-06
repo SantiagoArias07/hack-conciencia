@@ -285,49 +285,19 @@ const CAT_ICON = { PROTOCOLO:"🚨", EMERGENCIA:"🚨", ALERTA:"⚠️", DESPLIE
 const catIcon = (c) => CAT_ICON[String(c || "").toUpperCase()] || "✨";
 const nivelFromScore = (s) => s >= 80 ? 5 : s >= 60 ? 4 : s >= 40 ? 3 : s >= 20 ? 2 : 1;
 
-function AlertasSection({ onNav, modelState, rainMmh, liveZoneRain }) {
+// ai/aiStatus/onRegen vienen del componente App (persisten entre secciones)
+function AlertasSection({ onNav, modelState, ai, aiStatus, onRegen }) {
   const [tab, setTab] = React.useState("ciudadanos");
   const [filter, setFilter] = React.useState(0);
   const [q, setQ] = React.useState("");
-  const [ai, setAi] = React.useState(null);
-  const [aiStatus, setAiStatus] = React.useState("idle"); // idle | loading | ok | fallback
 
   const authorityRecs = React.useMemo(
     () => generateAuthorityRecs(modelState),
     [modelState && modelState.composite]
   );
 
-  // LLM payload from the live model state (mapea al esquema del system prompt)
-  const buildPayload = () => {
-    const zonas = (modelState && modelState.zoneScores ? modelState.zoneScores : []).slice(0, 12).map((z) => ({
-      zona: z.zone.short,
-      alcaldia: z.zone.name,
-      nivel_riesgo: nivelFromScore(z.score),
-      vuln: Math.round(z.zone.vuln * 100) / 100,
-      rain_mmh: Math.round(((liveZoneRain && liveZoneRain[z.zone.name] != null ? liveZoneRain[z.zone.name] : rainMmh) || 0) * 10) / 10,
-    }));
-    return { contexto: { indice_compuesto: modelState ? modelState.composite : 0, lluvia_mmh: Math.round(rainMmh || 0) }, zonas };
-  };
-
-  const fetchAI = () => {
-    setAiStatus("loading");
-    fetch("/api/recommendations", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(buildPayload()),
-    })
-      .then((r) => r.json())
-      .then((d) => {
-        if (d && d.ok && ((d.ciudadanos && d.ciudadanos.length) || (d.autoridades && d.autoridades.length))) {
-          setAi(d); setAiStatus("ok");
-        } else { setAiStatus("fallback"); }
-      })
-      .catch(() => setAiStatus("fallback"));
-  };
-
-  React.useEffect(() => { fetchAI(); }, []); // genera al entrar a la sección
-
-  // autoridades: usa IA si está disponible; si no, las plantillas por reglas
-  const autoridadesCards = (aiStatus === "ok" && ai && ai.autoridades && ai.autoridades.length)
+  // tarjetas de autoridades redactadas por IA (null si no hay)
+  const aiAuthCards = (ai && ai.autoridades && ai.autoridades.length)
     ? ai.autoridades.map((r) => ({
         prio: Math.max(1, Math.min(3, r.prioridad || 1)),
         category: r.categoria || "ACCIÓN",
@@ -337,7 +307,12 @@ function AlertasSection({ onNav, modelState, rainMmh, liveZoneRain }) {
         detail: r.detalle || "",
         window: r.ventana || "—",
       }))
-    : authorityRecs;
+    : null;
+  const aiCitizens = (ai && ai.ciudadanos && ai.ciudadanos.length) ? ai.ciudadanos : null;
+
+  // qué mostrar en autoridades según el estado: ok→IA, fallback→plantillas, loading→nada
+  const authCards = aiStatus === "ok" ? aiAuthCards : (aiStatus === "fallback" ? authorityRecs : null);
+  const loading = aiStatus === "loading" || aiStatus === "idle";
 
   const list = Gx.COLONIAS.filter((c) =>
     (filter === 0 || c.level === filter) &&
@@ -345,18 +320,29 @@ function AlertasSection({ onNav, modelState, rainMmh, liveZoneRain }) {
   );
   const pills = [{ k: 0, t: "Todos" }, { k: 3, t: "Alto" }, { k: 2, t: "Medio" }, { k: 1, t: "Bajo" }];
 
-  const highCount = autoridadesCards.filter(r => r.prio >= 2).length;
+  const highCount = (authCards || []).filter(r => r.prio >= 2).length;
+
+  const loader = (
+    <div className="ai-loading">
+      <span className="ai-spin-lg" />
+      <div className="ai-loading-t">Analizando el mapa y redactando recomendaciones…</div>
+      <div className="ai-loading-s mono">IA · Groq · Llama 3.3</div>
+    </div>
+  );
+  const emptyState = (
+    <div className="ai-empty mono">Sin alertas activas en este momento.</div>
+  );
 
   const aiBar = (
     <div className="ai-statusbar">
       <span className={"ai-chip" + (aiStatus === "ok" ? " on" : "")}>
-        {aiStatus === "loading"
+        {loading
           ? <React.Fragment><span className="ai-spin" /> Redactando con IA…</React.Fragment>
           : aiStatus === "ok"
-          ? <React.Fragment>✨ Redactado por IA · Groq · <b>{ai.model ? ai.model.split("-").slice(0,2).join(" ") : "llama"}</b></React.Fragment>
+          ? <React.Fragment>✨ Redactado por IA · Groq · <b>{ai && ai.model ? ai.model.split("-").slice(0,2).join(" ") : "llama"}</b></React.Fragment>
           : <React.Fragment>📋 Plantilla por reglas <span className="ai-hint">· activa la IA con GROQ_API_KEY</span></React.Fragment>}
       </span>
-      <button className="ai-regen" onClick={fetchAI} disabled={aiStatus === "loading"}>↻ Regenerar</button>
+      <button className="ai-regen" onClick={onRegen} disabled={aiStatus === "loading"}>↻ Regenerar</button>
     </div>
   );
 
@@ -392,10 +378,11 @@ function AlertasSection({ onNav, modelState, rainMmh, liveZoneRain }) {
               <div style={{fontSize:12,color:"var(--ink-3)",lineHeight:1.55}}>Evita circular por pasos a desnivel y avenidas inundables. No cruces corrientes de agua en movimiento. Sigue las indicaciones de Protección Civil.</div>
             </div>
 
-            {aiStatus === "ok" && ai.ciudadanos && ai.ciudadanos.length > 0 ? (
-              /* IA disponible → SOLO tarjetas de IA */
-              <div className="ai-citizen-wrap">
-                {ai.ciudadanos.map((c, i) => {
+            {loading ? loader
+             : aiStatus === "ok" ? (
+              aiCitizens ? (
+                <div className="ai-citizen-wrap">
+                  {aiCitizens.map((c, i) => {
                   const col = c.nivel >= 4 ? "var(--red)" : c.nivel >= 3 ? "var(--orange)" : "var(--cyan)";
                   const bg  = c.nivel >= 4 ? "rgba(239,68,68,.14)" : c.nivel >= 3 ? "rgba(249,115,22,.14)" : "rgba(0,212,255,.12)";
                   const nlabel = c.nivel >= 4 ? "Alto" : c.nivel >= 3 ? "Medio" : "Bajo";
@@ -412,8 +399,9 @@ function AlertasSection({ onNav, modelState, rainMmh, liveZoneRain }) {
                     </div>
                   );
                 })}
-              </div>
-            ) : (
+                </div>
+              ) : emptyState
+             ) : (
               /* sin IA → plantillas por colonia con filtros */
               <React.Fragment>
                 <div className="al-controls">
@@ -461,8 +449,10 @@ function AlertasSection({ onNav, modelState, rainMmh, liveZoneRain }) {
               <div style={{fontSize:12,color:"var(--ink-3)",lineHeight:1.55}}>Acciones preventivas derivadas del análisis del riesgo compuesto ({modelState ? modelState.composite : "—"}/100). Ordene por ventana de acción para priorizar.</div>
             </div>
 
+            {loading ? loader
+             : (authCards && authCards.length) ? (
             <div className="auth-recs">
-              {autoridadesCards.map((rec, i) => (
+              {authCards.map((rec, i) => (
                 <div className="auth-rec glass" key={i} style={{borderLeft:`4px solid ${PRIO_COLOR[rec.prio]}`}}>
                   <div className="auth-rec-head">
                     <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -489,6 +479,7 @@ function AlertasSection({ onNav, modelState, rainMmh, liveZoneRain }) {
                 </div>
               ))}
             </div>
+             ) : emptyState}
 
             <div className="auth-disclaimer glass" style={{marginTop:24}}>
               <span style={{fontSize:16}}>⚠️</span>

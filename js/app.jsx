@@ -23,6 +23,10 @@ function App() {
   const [liveZoneRain, setLiveZoneRain] = React.useState(null);
   const [zoneSrc,      setZoneSrc]      = React.useState("");
 
+  // recomendaciones por IA (Groq) — viven en App para persistir entre secciones
+  const [aiRecs,       setAiRecs]       = React.useState(null);
+  const [aiRecsStatus, setAiRecsStatus] = React.useState("idle"); // idle | loading | ok | fallback
+
   // animation
   const [hour,        setHour]       = React.useState(0);
   const [scenario,    setScenario]   = React.useState("esperado");
@@ -103,6 +107,42 @@ function App() {
     () => Ga.computeState(realRain, 1.5, "esperado", null, liveZoneRain),
     [realRain, liveZoneRain]
   );
+
+  // payload enriquecido para el LLM (incluye elevación y susceptibilidad por zona)
+  const buildRecsPayload = () => {
+    const nivel = (s) => s >= 80 ? 5 : s >= 60 ? 4 : s >= 40 ? 3 : s >= 20 ? 2 : 1;
+    const zs = (modelState && modelState.zoneScores) ? modelState.zoneScores : [];
+    const zonas = zs.slice(0, 14).map((z) => ({
+      zona: z.zone.short,
+      alcaldia: z.zone.name,
+      nivel_riesgo: nivel(z.score),
+      vuln: Math.round(z.zone.vuln * 100) / 100,
+      rain_mmh: Math.round(((liveZoneRain && liveZoneRain[z.zone.name] != null ? liveZoneRain[z.zone.name] : rainMmh) || 0) * 10) / 10,
+      elevacion_m: z.zone.elev,
+      susceptibilidad_fisica: Math.round(z.zone.sus * 100) / 100,
+    }));
+    return { contexto: { indice_compuesto: modelState ? modelState.composite : 0, lluvia_mmh: Math.round(rainMmh || 0) }, zonas };
+  };
+
+  const fetchRecs = () => {
+    setAiRecsStatus("loading");
+    fetch("/api/recommendations", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(buildRecsPayload()),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d && d.ok && ((d.ciudadanos && d.ciudadanos.length) || (d.autoridades && d.autoridades.length))) {
+          setAiRecs(d); setAiRecsStatus("ok");
+        } else { setAiRecsStatus("fallback"); }
+      })
+      .catch(() => setAiRecsStatus("fallback"));
+  };
+
+  // genera la primera vez que entras a Alertas; luego persiste (regenera con el botón)
+  React.useEffect(() => {
+    if (section === "alertas" && aiRecsStatus === "idle") fetchRecs();
+  }, [section, aiRecsStatus]);
 
   // editing rain or any param drops out of EN VIVO into Simulación
   const onSetRain = (v) => { setRainMmh(v); setIsManual(true); setSimMode("manual"); };
@@ -222,8 +262,8 @@ function App() {
 
         {/* ---- ALERTAS ---- */}
         {section === "alertas" && (
-          <AlertasSection onNav={setSection} modelState={modelState} simParams={simParams}
-            rainMmh={rainMmh} liveZoneRain={liveZoneRain} />
+          <AlertasSection onNav={setSection} modelState={modelState}
+            ai={aiRecs} aiStatus={aiRecsStatus} onRegen={fetchRecs} />
         )}
 
         {/* ---- TRANSPARENCIA ---- */}

@@ -14,9 +14,19 @@ Contexto del sistema:
 - nivel_riesgo va de 1 (muy bajo) a 5 (muy alto).
 - vuln es vulnerabilidad social de 0 a 1 (1 = más vulnerable).
 
-Recibirás un JSON con "contexto" (lluvia, índice compuesto) y "zonas" (cada una: zona, alcaldia, nivel_riesgo, vuln, rain_mmh).
+Recibirás un JSON con "contexto" (lluvia, índice compuesto) y "zonas". Cada zona trae: zona, alcaldia, nivel_riesgo (1-5), vuln (0-1), rain_mmh, elevacion_m y susceptibilidad_fisica (0-1; ALTA ≈ cuenca baja, drenaje/alcantarillado deficiente o suelo lacustre; BAJA ≈ terreno más elevado y mejor drenado).
 
-GENERA UNA RECOMENDACIÓN POR CADA ZONA con nivel_riesgo >= 3 (en ambas listas), más acciones transversales para autoridades. Apunta a entre 5 y 10 elementos por lista cuando haya suficientes zonas. Cada tarjeta debe ser DISTINTA y específica de su zona — nada genérico, nada repetido como "Evacúa ahora" en todas.
+PERSONALIZA cada tarjeta con los datos de SU zona (demuestra que entiendes el mapa):
+- Cita siempre la lluvia real (rain_mmh) y di si es intensa (>10 mm/h) o torrencial (>30 mm/h).
+- susceptibilidad_fisica alta (>= 0.8): menciona explícitamente el drenaje/alcantarillado deficiente, la cuenca baja o el lecho lacustre como causa.
+- elevacion_m alta con riesgo medio: aclara que está en terreno más elevado, que el peligro es menor y que mantengan la calma con precaución.
+- vuln alta (>= 0.7): considera población vulnerable (adultos mayores, niños, viviendas precarias).
+- Cada tarjeta DEBE ser distinta. PROHIBIDO repetir el mismo texto (p. ej. "Evacúa ahora") en varias zonas.
+
+COBERTURA (muy importante):
+- Incluye SIEMPRE TODAS las zonas con nivel_riesgo >= 4 (rojas). No las limites ni omitas ninguna, aunque sean muchas.
+- Si hay pocas rojas, agrega también las de nivel_riesgo = 3 (naranjas) hasta tener varias recomendaciones útiles.
+- Nunca dejes fuera una zona roja por llegar a un tope.
 
 CIUDADANOS — objeto { "zona", "nivel", "titulo", "mensaje" }:
 - "titulo": acción principal corta (2-5 palabras), ej. "Evita Eje 8 Sur hoy".
@@ -69,7 +79,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model,
         temperature: 0.5,
-        max_tokens: 4000,
+        max_tokens: 6000,
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
@@ -98,8 +108,8 @@ export default async function handler(req, res) {
     res.status(200).json({
       ok: true,
       model,
-      ciudadanos: Array.isArray(parsed.ciudadanos) ? parsed.ciudadanos.slice(0, 10) : [],
-      autoridades: Array.isArray(parsed.autoridades) ? parsed.autoridades.slice(0, 10) : [],
+      ciudadanos: Array.isArray(parsed.ciudadanos) ? parsed.ciudadanos.slice(0, 14) : [],
+      autoridades: Array.isArray(parsed.autoridades) ? parsed.autoridades.slice(0, 14) : [],
     });
   } catch (e) {
     res.status(200).json({ ok: false, reason: "exception", detail: String(e).slice(0, 200) });
