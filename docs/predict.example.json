@@ -1,0 +1,16 @@
+{
+  "_README": "Respuesta esperada del backend ML (AquaInfer) en GET /predict. Para PROBAR el camino de éxito sin Railway: copia este archivo a la raíz como 'predict-mock.json' y pon en js/geo.jsx -> const BACKEND_URL = \"predict-mock.json\"; (luego regrésalo a null). Los nombres de zonas deben coincidir con ZONES en geo.jsx.",
+  "timestamp": "2026-06-06T14:30:00Z",
+  "zones": {
+    "Iztapalapa":          { "lluvia_mm": 11.1, "prob_lluvia": 0.85, "nivel_riesgo": 5, "alerta": "Alerta máxima en Iztapalapa: cuenca baja con drenaje rebasado." },
+    "Tláhuac":             { "lluvia_mm": 9.4,  "prob_lluvia": 0.80, "nivel_riesgo": 5, "alerta": "Tláhuac sobre lecho lacustre: acumulación rápida prevista." },
+    "Xochimilco":          { "lluvia_mm": 8.2,  "prob_lluvia": 0.72, "nivel_riesgo": 4, "alerta": "Canales de Xochimilco en nivel elevado." },
+    "Iztacalco":           { "lluvia_mm": 7.8,  "prob_lluvia": 0.70, "nivel_riesgo": 4, "alerta": "Encharcamiento por saturación de drenaje." },
+    "Venustiano Carranza": { "lluvia_mm": 6.9,  "prob_lluvia": 0.65, "nivel_riesgo": 3, "alerta": "Precaución en pasos a desnivel." },
+    "Gustavo A. Madero":   { "lluvia_mm": 6.0,  "prob_lluvia": 0.60, "nivel_riesgo": 3, "alerta": "Monitoreo en zonas bajas." },
+    "Nezahualcóyotl":      { "lluvia_mm": 10.2, "prob_lluvia": 0.82, "nivel_riesgo": 5, "alerta": "Cuenca cerrada: cárcamos al límite." },
+    "Ecatepec":            { "lluvia_mm": 9.0,  "prob_lluvia": 0.78, "nivel_riesgo": 4, "alerta": "Río de los Remedios cerca de su capacidad." },
+    "Coyoacán":            { "lluvia_mm": 3.1,  "prob_lluvia": 0.40, "nivel_riesgo": 2, "alerta": "Riesgo bajo, condiciones estables." },
+    "Tlalpan":             { "lluvia_mm": 2.4,  "prob_lluvia": 0.35, "nivel_riesgo": 2, "alerta": "Escurrimiento del Ajusco controlado." }
+  }
+}

@@ -18,7 +18,7 @@ function arcPath(cx, cy, r, startDeg, endDeg) {
 }
 
 /* ===================== LEFT PANEL ===================== */
-function LeftPanel({ rainMmh, condMode, setCondMode, scenario, hour, liveWx, wxStatus }) {
+function LeftPanel({ rainMmh, condMode, setCondMode, scenario, hour, liveWx, wxStatus, dataSource }) {
   const live = condMode === "real" && liveWx;
   const wx = condMode === "hist"
     ? { temp: 21, feels: 20, hum: 64, wind: 9,  dir: "",   cond: "Parcialmente nublado", sub: "Promedio histórico · junio", pres: 1018 }
@@ -106,6 +106,12 @@ function LeftPanel({ rainMmh, condMode, setCondMode, scenario, hour, liveWx, wxS
           <div className="toggle-cap" style={{ marginTop: 0 }}>
             <span className="dot" style={{ background: wxStatus === "ok" ? "var(--green)" : "var(--amber)", boxShadow: wxStatus === "ok" ? "0 0 6px var(--green)" : "none" }} />
             Open-Meteo · modelos globales (incl. SMN) · {wxStatus === "ok" ? "en vivo" : "conectando…"}
+          </div>
+          <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginTop: 9 }}>
+            <span className="src-badge meteo">Open-Meteo</span>
+            {dataSource === "backend-ml"
+              ? <span className="src-badge ml">ML Real · AquaInfer</span>
+              : <span className="src-badge sim">Modo simulación</span>}
           </div>
         </div>
 

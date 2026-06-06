@@ -2,6 +2,12 @@
 // FloodSense — geo, projection, hex grid & hydrological risk model
 // ============================================================
 
+// ---- Backend ML externo (AquaInfer · Railway) ----
+// null = usar fallback automático (Open-Meteo + modelo simulado).
+// Cuando exista la URL de Railway, cambiar SOLO esta constante para activarlo, p.ej.:
+//   const BACKEND_URL = "https://aquainfer-cdmx.up.railway.app/predict";
+const BACKEND_URL = null;
+
 const BOUNDS = { minLng: -99.46, maxLng: -98.82, minLat: 19.12, maxLat: 19.61 };
 const LAT0 = (BOUNDS.minLat + BOUNDS.maxLat) / 2;
 const KM_PER_DEG = 111;
@@ -145,15 +151,22 @@ function hexFill(r) {
   return `rgba(239,68,68,${Math.min(0.92, a).toFixed(3)})`;
 }
 
-function computeState(rainMmh, hour, scenKey, simParams, zoneRain) {
+function computeState(rainMmh, hour, scenKey, simParams, zoneRain, backendZones) {
   const risks = new Float32Array(HEXES.length);
   const zoneAgg = {};
   let cityNum = 0, cityDen = 0;
   for (let i = 0; i < HEXES.length; i++) {
     const h = HEXES[i];
-    // spatial rain: use the hex's zone live rain when available, else the global value
-    const hr = zoneRain && zoneRain[h.zone.name] != null ? zoneRain[h.zone.name] : rainMmh;
-    const r = hexRisk(h, hr, hour, scenKey, simParams);
+    let r;
+    const bz = backendZones && backendZones[h.zone.name];
+    if (bz && typeof bz.nivel_riesgo === "number") {
+      // backend ML manda: normaliza nivel_riesgo 1-5 a escala 0-1
+      r = Math.max(0, Math.min(1, bz.nivel_riesgo / 5));
+    } else {
+      // ---- path simulado existente, intacto ----
+      const hr = zoneRain && zoneRain[h.zone.name] != null ? zoneRain[h.zone.name] : rainMmh;
+      r = hexRisk(h, hr, hour, scenKey, simParams);
+    }
     risks[i] = r;
     if (h.edgeFade <= 0.02) continue;
     const w = 0.6 + 0.4 * h.vuln;
@@ -243,6 +256,28 @@ async function fetchLiveState(url) {
   return { rain, raw: d };
 }
 
+// ---- Backend ML (AquaInfer) — GET /predict → { timestamp, zones:{ Zona:{lluvia_mm, prob_lluvia, nivel_riesgo, alerta} } }
+// Nunca lanza: si BACKEND_URL es null, hay timeout, CORS, o formato inválido → console.warn y null (fallback).
+async function fetchBackendState() {
+  if (!BACKEND_URL) return null;
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 5000); // timeout 5s
+    const res = await fetch(BACKEND_URL, { signal: ctrl.signal, cache: "no-store" });
+    clearTimeout(timer);
+    if (!res.ok) { console.warn("FloodSense: backend HTTP " + res.status + ", usando fallback"); return null; }
+    const data = await res.json();
+    if (!data || !data.zones || typeof data.zones !== "object") {
+      console.warn("FloodSense: respuesta de backend sin 'zones', usando fallback");
+      return null;
+    }
+    return data.zones;
+  } catch (e) {
+    console.warn("FloodSense: backend no disponible (" + (e && e.message ? e.message : e) + "), usando fallback");
+    return null;
+  }
+}
+
 async function fetchLiveWeather() {
   const res = await fetch(OPEN_METEO_URL);
   if (!res.ok) throw new Error("Open-Meteo HTTP " + res.status);
@@ -290,5 +325,5 @@ window.FloodGeo = {
   LEVEL_NAMES, LEVEL_COLORS, SCEN,
   COLONIAS, CONF_COLORS, CONF_NAMES, MAP_CENTER, MAP_ZOOM,
   DRAIN_MULT, SOIL_MULT, CANAL_MULT, SIM_PARAMS_META,
-  fetchLiveWeather, fetchZoneRain, fetchLiveState, wxLabel,
+  fetchLiveWeather, fetchZoneRain, fetchLiveState, fetchBackendState, BACKEND_URL, wxLabel,
 };

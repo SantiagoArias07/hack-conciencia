@@ -686,6 +686,13 @@ input[type=range].rng::-moz-range-thumb{width:18px;height:18px;border-radius:50%
 .wx-live-badge{display:inline-flex;align-items:center;gap:5px;font-size:8.5px;font-weight:700;letter-spacing:.1em;color:var(--ink-3);background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:20px;padding:2px 8px;white-space:nowrap}
 .wx-live-dot{width:6px;height:6px;border-radius:50%;flex:0 0 6px;box-shadow:0 0 6px currentColor;animation:blink 2s ease-in-out infinite}
 
+/* ---- data-source badges (Open-Meteo / ML backend / simulado) ---- */
+.src-badge{font-size:9px;font-weight:700;letter-spacing:.03em;padding:3px 9px;border-radius:6px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.src-badge.meteo{color:var(--cyan);background:rgba(0,212,255,.12);border:1px solid rgba(0,212,255,.25)}
+.src-badge.ml{color:#34d399;background:rgba(52,211,153,.14);border:1px solid rgba(52,211,153,.38)}
+.src-badge.ml::before{content:"";width:6px;height:6px;border-radius:50%;background:#34d399;box-shadow:0 0 6px #34d399}
+.src-badge.sim{color:var(--ink-3);background:rgba(255,255,255,.05);border:1px solid var(--line)}
+
 /* ---- mobile-only components (hidden on desktop) ---- */
 .mobile-sim-tabs{display:none}
 .mobile-bottomnav{display:none}

@@ -23,6 +23,9 @@ function App() {
   const [liveZoneRain, setLiveZoneRain] = React.useState(null);
   const [zoneSrc,      setZoneSrc]      = React.useState("");
 
+  // backend ML externo (AquaInfer · Railway); null = fallback transparente
+  const [backendZones, setBackendZones] = React.useState(null);
+
   // recomendaciones por IA (Groq) — viven en App para persistir entre secciones
   const [aiRecs,       setAiRecs]       = React.useState(null);
   const [aiRecsStatus, setAiRecsStatus] = React.useState("idle"); // idle | loading | ok | fallback
@@ -62,6 +65,17 @@ function App() {
         .catch(() => Ga.fetchZoneRain()
           .then((z) => { if (alive) { setLiveZoneRain(z); setZoneSrc("open-meteo"); } })
           .catch(() => {}));
+      // backend ML externo (AquaInfer) — reintenta cada ciclo (reconexión automática)
+      Ga.fetchBackendState().then((zones) => {
+        if (!alive) return;
+        if (zones && Object.keys(zones).length) {
+          setBackendZones(zones);
+          console.log("✅ Backend AquaInfer conectado:", Object.keys(zones).length, "zonas");
+        } else {
+          setBackendZones(null);
+          console.log("⚠️ Backend no disponible, usando Open-Meteo + modelo simulado");
+        }
+      });
     };
     load();
     const id = setInterval(load, 5 * 60 * 1000);
@@ -88,11 +102,16 @@ function App() {
 
   // spatial rain only feeds the model in EN VIVO (real); manual mode is uniform
   const zoneRain = simMode === "realtime" ? liveZoneRain : null;
+  // el backend ML manda solo en EN VIVO; en simulación el usuario explora escenarios libremente
+  const effBackend = simMode === "realtime" ? backendZones : null;
 
   const modelState = React.useMemo(
-    () => Ga.computeState(rainMmh, hour, scenario, simParams, zoneRain),
-    [rainMmh, hour, scenario, simMode, drainage, soilSat, canalLevel, liveZoneRain]
+    () => Ga.computeState(rainMmh, hour, scenario, simParams, zoneRain, effBackend),
+    [rainMmh, hour, scenario, simMode, drainage, soilSat, canalLevel, liveZoneRain, backendZones]
   );
+
+  // fuente del RIESGO que se ve en el mapa: backend ML real o modelo simulado
+  const dataSource = (simMode === "realtime" && backendZones) ? "backend-ml" : "simulado";
 
   // REAL state for the Inicio KPIs — always live data, never the simulator's params
   const realRain = React.useMemo(() => {
@@ -234,7 +253,8 @@ function App() {
 
             <aside className={"col-left" + (mobileTab !== "clima" ? " mob-hidden" : "")}>
               <LeftPanel rainMmh={rainMmh} condMode={condMode} setCondMode={onSetCond}
-                scenario={scenario} hour={hour} liveWx={liveWx} wxStatus={wxStatus} />
+                scenario={scenario} hour={hour} liveWx={liveWx} wxStatus={wxStatus}
+                dataSource={dataSource} />
             </aside>
 
             <main className="col-map">
