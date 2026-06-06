@@ -696,24 +696,37 @@ input[type=range].rng::-moz-range-thumb{width:18px;height:18px;border-radius:50%
   /* scrollable sections clear the bottom nav */
   .section{padding-bottom:74px}
 
-  /* simulador: fixed map on top (controls always visible) + panel scrolls internally */
-  .sec-simulador{flex-direction:column;overflow:hidden}
-  .col-map{order:1;flex:0 0 44vh;height:44vh;width:100%;border:none}
+  /* simulador: BIG map + collapsible bottom-sheet panels */
+  .sec-simulador{flex-direction:column;overflow:hidden;padding-bottom:60px}
+  .col-map{order:1;flex:1 1 auto;min-height:0;width:100%;border:none}
   .mobile-sim-tabs{
-    order:2;flex:0 0 auto;display:flex;gap:6px;padding:9px 12px;
-    background:var(--bg);border-bottom:1px solid var(--line);
+    order:2;flex:0 0 auto;display:flex;gap:8px;padding:8px 12px;
+    background:rgba(13,17,23,.96);border-top:1px solid var(--line-2);
   }
   .mobile-sim-tabs button{
-    flex:1;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:10px;
-    color:var(--ink-3);font-family:var(--font);font-size:12.5px;font-weight:600;
-    padding:9px;cursor:pointer;transition:.15s;
+    flex:1;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:10px;
+    color:var(--ink-2);font-family:var(--font);font-size:12.5px;font-weight:600;
+    padding:10px;cursor:pointer;transition:.15s;
   }
-  .mobile-sim-tabs button.on{background:rgba(0,212,255,.12);border-color:rgba(0,212,255,.4);color:var(--cyan)}
-  .col-left,.col-right{order:3;width:100%;flex:1 1 auto;min-height:0;border:none}
-  .col-left.mob-hidden,.col-right.mob-hidden{display:none}
-  .col-left .scroll,.col-right .scroll{padding-bottom:72px}
+  .mobile-sim-tabs button.on{background:rgba(0,212,255,.14);border-color:rgba(0,212,255,.45);color:var(--cyan)}
 
-  /* keep map controls usable; compact legend, hide the tech chip */
+  /* panels = bottom sheets that slide up over the map on demand */
+  .col-left,.col-right{
+    position:fixed;left:0;right:0;bottom:116px;z-index:150;
+    max-height:56vh;width:100%;
+    background:linear-gradient(180deg,#111827,#0d1117);
+    border-top:1px solid var(--line-2);border-radius:18px 18px 0 0;
+    box-shadow:0 -16px 50px rgba(0,0,0,.6);
+    display:flex;flex-direction:column;
+    animation:sheetUp .22s cubic-bezier(.4,0,.2,1);
+  }
+  .col-left.mob-hidden,.col-right.mob-hidden{display:none}
+  .col-left .scroll,.col-right .scroll{flex:1 1 auto;overflow-y:auto;padding-bottom:16px}
+  .col-left::before,.col-right::before{content:"";position:absolute;top:7px;left:50%;transform:translateX(-50%);width:38px;height:4px;border-radius:3px;background:rgba(255,255,255,.18);z-index:3}
+  .col-left .panel-head,.col-right .panel-head{padding-top:18px}
+  @keyframes sheetUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+  /* map overlays: compact legend, hide the tech chip */
   .map-status{display:none}
   .legend{top:10px;right:10px;padding:7px 9px}
   .legend .lh{display:none}

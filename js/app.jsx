@@ -35,8 +35,8 @@ function App() {
   const [liveWx,      setLiveWx]     = React.useState(null);
   const [wxStatus,    setWxStatus]   = React.useState("loading"); // loading | ok | error
 
-  // mobile simulador tab: "clima" | "params"
-  const [mobileTab,   setMobileTab]  = React.useState("params");
+  // mobile simulador bottom-sheet: null (closed) | "clima" | "params"
+  const [mobileTab,   setMobileTab]  = React.useState(null);
 
   // toast
   const [toast,       setToast]      = React.useState(null);
@@ -88,6 +88,20 @@ function App() {
   const modelState = React.useMemo(
     () => Ga.computeState(rainMmh, hour, scenario, simParams, zoneRain),
     [rainMmh, hour, scenario, simMode, drainage, soilSat, canalLevel, liveZoneRain]
+  );
+
+  // REAL state for the Inicio KPIs — always live data, never the simulator's params
+  const realRain = React.useMemo(() => {
+    if (liveZoneRain) {
+      const cdmx = Ga.ZONES.filter((z) => !z.edo).map((z) => liveZoneRain[z.name] || 0);
+      return cdmx.length ? Math.round((cdmx.reduce((a, b) => a + b, 0) / cdmx.length) * 10) / 10 : 0;
+    }
+    return liveWx ? Math.round((liveWx.precip || 0) * 10) / 10 : 0;
+  }, [liveZoneRain, liveWx]);
+
+  const realState = React.useMemo(
+    () => Ga.computeState(realRain, 1.5, "esperado", null, liveZoneRain),
+    [realRain, liveZoneRain]
   );
 
   // editing rain or any param drops out of EN VIVO into Simulación
@@ -144,20 +158,22 @@ function App() {
 
         {/* ---- INICIO ---- */}
         {section === "inicio" && (
-          <HeroSection modelState={modelState} rainMmh={rainMmh} scenario={scenario}
-            onNav={setSection} liveWx={liveWx} wxStatus={wxStatus} />
+          <HeroSection modelState={modelState} realState={realState} realRain={realRain}
+            scenario={scenario} onNav={setSection} liveWx={liveWx} wxStatus={wxStatus} />
         )}
 
         {/* ---- SIMULADOR ---- */}
         {section === "simulador" && (
           <div className="sec-simulador">
-            {/* mobile-only tab switcher */}
+            {/* mobile-only bottom-sheet triggers */}
             <div className="mobile-sim-tabs">
-              <button className={mobileTab === "clima" ? "on" : ""} onClick={() => setMobileTab("clima")}>
-                🌧️ Clima
+              <button className={mobileTab === "clima" ? "on" : ""}
+                onClick={() => setMobileTab(mobileTab === "clima" ? null : "clima")}>
+                🌧️ Clima {mobileTab === "clima" ? "▾" : "▴"}
               </button>
-              <button className={mobileTab === "params" ? "on" : ""} onClick={() => setMobileTab("params")}>
-                ⚙️ Parámetros
+              <button className={mobileTab === "params" ? "on" : ""}
+                onClick={() => setMobileTab(mobileTab === "params" ? null : "params")}>
+                ⚙️ Parámetros {mobileTab === "params" ? "▾" : "▴"}
               </button>
             </div>
 

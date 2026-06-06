@@ -100,19 +100,12 @@ function LeftPanel({ rainMmh, condMode, setCondMode, scenario, hour, liveWx, wxS
           </div>
         </div>
 
+        {/* live data source (read-only — el modo real/simulación se controla con EN VIVO en el mapa) */}
         <div className="section-pad" style={{ paddingTop: 4 }}>
           <div className="eyebrow" style={{ marginBottom: 10 }}><span className="tick" style={{ background: "var(--ink-4)" }} />Fuente de datos</div>
-          <div className="cond-sw-row">
-            <span className="cond-sw-label">{condMode === "real" ? "Condiciones reales" : "Históricas (2015–2024)"}</span>
-            <label className="ios-sw">
-              <input type="checkbox" checked={condMode === "real"}
-                onChange={(e) => setCondMode(e.target.checked ? "real" : "hist")} />
-              <span className="ios-track"><span className="ios-thumb" /></span>
-            </label>
-          </div>
-          <div className="toggle-cap" style={{ marginTop: 8 }}>
-            <span className="dot" style={{ background: condMode === "real" ? "var(--green)" : "var(--ink-4)", boxShadow: condMode === "real" ? "0 0 6px var(--green)" : "none" }} />
-            {condMode === "real" ? "Open-Meteo · modelos globales (incl. SMN) · en vivo" : "Serie histórica · misma fecha"}
+          <div className="toggle-cap" style={{ marginTop: 0 }}>
+            <span className="dot" style={{ background: wxStatus === "ok" ? "var(--green)" : "var(--amber)", boxShadow: wxStatus === "ok" ? "0 0 6px var(--green)" : "none" }} />
+            Open-Meteo · modelos globales (incl. SMN) · {wxStatus === "ok" ? "en vivo" : "conectando…"}
           </div>
         </div>
 

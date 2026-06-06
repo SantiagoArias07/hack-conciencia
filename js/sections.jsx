@@ -85,7 +85,7 @@ function KPICard({ label, value, unit, accent, sub }) {
   );
 }
 
-function HeroSection({ modelState, rainMmh, scenario, onNav, liveWx, wxStatus }) {
+function HeroSection({ modelState, realState, realRain, scenario, onNav, liveWx, wxStatus }) {
   const [secs, setSecs] = React.useState(2 * 3600 + 14 * 60);
   React.useEffect(() => {
     const id = setInterval(() => setSecs((s) => (s <= 0 ? 0 : s - 1)), 1000);
@@ -95,14 +95,14 @@ function HeroSection({ modelState, rainMmh, scenario, onNav, liveWx, wxStatus })
   const vm = Math.floor((secs % 3600) / 60);
   const vs = secs % 60;
 
-  const sm = Gx.SCEN[scenario].mult;
+  // forecast strip is REAL (Open-Meteo), no scenario multiplier
   const liveFc = liveWx && liveWx.forecast && liveWx.forecast.length >= 6
     ? liveWx.forecast.map((f) => f.precip)
     : null;
   const fcBase = liveFc || [41, 47, 38, 28, 18, 11];
   const fcData = [
-    { t: "Ahora", v: Math.round(rainMmh) },
-    ...fcBase.map((v, i) => ({ t: "+" + (i + 1) + "h", v: Math.round(v * sm) })),
+    { t: "Ahora", v: Math.round(realRain) },
+    ...fcBase.map((v, i) => ({ t: "+" + (i + 1) + "h", v: Math.round(v) })),
   ];
   const colOf  = (v) => { const l = v>=45?3:v>=25?2:v>=8?1:0; return l===3?"#ef4444":l===2?"#f97316":l===1?"#22d3ee":"#2d8a6e"; };
   const icoOf  = (v) => v >= 45 ? "⛈" : v >= 25 ? "🌧" : v >= 8 ? "🌦" : "🌤";
@@ -125,8 +125,8 @@ function HeroSection({ modelState, rainMmh, scenario, onNav, liveWx, wxStatus })
         </div>
 
         <div className="kpi-row">
-          <KPICard label="Lluvia actual"           value={Math.round(rainMmh)}                  unit=" mm/h" accent="var(--cyan)"   sub="Intensidad media en la cuenca" />
-          <KPICard label="Colonias en riesgo alto"  value={Math.max(modelState.altoColonias, 0)} unit=""     accent="var(--red)"    sub="Requieren atención inmediata" />
+          <KPICard label="Lluvia actual"           value={Math.round(realRain)}                 unit=" mm/h" accent="var(--cyan)"   sub="Intensidad media en la cuenca" />
+          <KPICard label="Colonias en riesgo alto"  value={Math.max(realState.altoColonias, 0)}  unit=""     accent="var(--red)"    sub="Requieren atención inmediata" />
           <KPICard label="Datos inferidos por IA"   value="47"                                   unit=""     accent="var(--cyan)"   sub="Colonias sin sensor, modeladas" />
           <KPICard label="Ventana de acción"         value={`${vh}h ${window.pad2(vm)}m`}         unit=""     accent="#f97316"       sub={<span className="mono" style={{fontSize:10}}>{`restan ${window.pad2(vm)}:${window.pad2(vs)}`}</span>} />
         </div>
