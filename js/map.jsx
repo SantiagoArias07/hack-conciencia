@@ -101,9 +101,37 @@ function LeafletMap({ modelState, condMode, selected, onSelect }) {
   const tipR   = tipHex ? modelState.risks[tipHex.id] : 0;
   const tipLvl = G.riskLevel(tipR);
 
+  // pinned info card for the clicked hex
+  const selR   = selected ? modelState.risks[selected.id] : 0;
+  const selLvl = G.riskLevel(selR);
+
   return (
     <div className="lmap-wrap" style={{ cursor: hover ? "pointer" : "grab" }}>
       <div ref={elRef} className="lmap" />
+
+      {selected && (
+        <div className="hexinfo frost">
+          <button className="hexinfo-x" onClick={() => onSelect(null)} aria-label="cerrar">×</button>
+          <div className="hexinfo-eyebrow">
+            <span className="hexinfo-pin" />
+            {selected.zone.edo ? "Edo. de México" : "Alcaldía · CDMX"}
+          </div>
+          <div className="hexinfo-name">{selected.zone.short}</div>
+          <div className="hexinfo-badge" style={{ background: G.LEVEL_COLORS[selLvl] + "22", color: G.LEVEL_COLORS[selLvl] }}>
+            {G.LEVEL_NAMES[selLvl]} · {Math.round(selR * 100)}%
+          </div>
+          <div className="hexinfo-bar"><i style={{ width: Math.round(selR * 100) + "%", background: G.LEVEL_COLORS[selLvl] }} /></div>
+          <div className="hexinfo-rows">
+            <div className="hexinfo-row"><span>Elevación</span><b>{selected.zone.elev} m</b></div>
+            <div className="hexinfo-row"><span>Susceptibilidad</span><b>{Math.round(selected.sus * 100)}%</b></div>
+            <div className="hexinfo-row"><span>Vulnerabilidad</span><b>{Math.round(selected.vuln * 100)}%</b></div>
+          </div>
+          <div className="hexinfo-src">
+            <span className="d" style={{ background: selected.conf === 0 ? "var(--green)" : selected.conf === 1 ? "#fbbf24" : "#fb923c" }} />
+            {selected.conf === 0 ? "Dato de sensor real" : selected.conf === 1 ? "Inferido por modelo IA" : "Alta incertidumbre"}
+          </div>
+        </div>
+      )}
 
       {tipHex && (
         <div className="hextip frost show" style={{ left: hover.x, top: hover.y - 6 }}>
@@ -136,7 +164,7 @@ function LeafletMap({ modelState, condMode, selected, onSelect }) {
 
       <div className="map-status">
         <div className="map-chip frost">
-          <span className="mono" style={{ color: "var(--ink-2)" }}>H3 · res 8</span>
+          <span className="mono" style={{ color: "var(--ink-2)" }}>Malla hex · 532</span>
         </div>
         <div className={"map-chip frost" + (condMode === "hist" ? " hist" : "")}>
           <span className={"live" + (condMode === "hist" ? " hide" : "")} />

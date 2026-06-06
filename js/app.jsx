@@ -14,8 +14,8 @@ function App() {
   const [soilSat,     setSoilSat]    = React.useState("normal");
   const [canalLevel,  setCanalLevel] = React.useState("normal");
 
-  // rain & conditions
-  const [rainMmh,     setRainMmh]    = React.useState(34);
+  // rain & conditions (rain starts at 0 until live data arrives, so "real" = real)
+  const [rainMmh,     setRainMmh]    = React.useState(0);
   const [isManual,    setIsManual]   = React.useState(false);
   const [condMode,    setCondMode]   = React.useState("real");
 
@@ -53,13 +53,12 @@ function App() {
     return () => { alive = false; clearInterval(id); };
   }, []);
 
-  // in EN VIVO (realtime) mode, sync rain to live precipitation
+  // sync rain to REAL live precipitation whenever on real conditions and not manually overridden
   React.useEffect(() => {
-    if (simMode === "realtime" && condMode === "real" && liveWx) {
+    if (condMode === "real" && !isManual && liveWx) {
       setRainMmh(Math.round((liveWx.precip || 0) * 10) / 10);
-      setIsManual(false);
     }
-  }, [simMode, condMode, liveWx]);
+  }, [condMode, isManual, liveWx]);
 
   // build simParams only when in manual mode
   const simParams = simMode === "manual"
@@ -72,7 +71,17 @@ function App() {
   );
 
   const onSetRain = (v) => { setRainMmh(v); setIsManual(true); };
-  const onSetCond = (m) => { setCondMode(m); setIsManual(false); setRainMmh(m === "hist" ? 12 : 34); };
+  const onSetCond = (m) => {
+    setCondMode(m); setIsManual(false);
+    if (m === "hist") setRainMmh(12);
+    else setRainMmh(liveWx ? Math.round((liveWx.precip || 0) * 10) / 10 : 0);
+  };
+
+  // EN VIVO toggle: realtime locks params + follows live real data
+  const onSetSimMode = (m) => {
+    setSimMode(m);
+    if (m === "realtime") { setIsManual(false); setCondMode("real"); }
+  };
 
   // switch to manual mode when user edits any param
   const setDrainageM   = (v) => { setDrainage(v);   setSimMode("manual"); };
@@ -145,7 +154,7 @@ function App() {
                 selected={selected} onSelect={setSelected} />
 
               {/* floating EN VIVO / simulación toggle */}
-              <SimControl simMode={simMode} setSimMode={setSimMode} />
+              <SimControl simMode={simMode} setSimMode={onSetSimMode} />
 
               <TimeSlider hour={hour} setHour={setHour} playing={playing}
                 togglePlay={togglePlay} scenario={scenario} setScenario={setScenario} />
