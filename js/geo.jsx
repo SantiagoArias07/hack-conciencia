@@ -4,9 +4,8 @@
 
 // ---- Backend ML externo (AquaInfer · Railway) ----
 // null = usar fallback automático (Open-Meteo + modelo simulado).
-// Cuando exista la URL de Railway, cambiar SOLO esta constante para activarlo, p.ej.:
-//   const BACKEND_URL = "https://aquainfer-cdmx.up.railway.app/predict";
-const BACKEND_URL = null;
+// Cuando exista la URL de Railway, cambiar SOLO esta constante para activarlo:
+const BACKEND_URL = "https://hackatonagentes-conciencia-production.up.railway.app/predict";
 
 const BOUNDS = { minLng: -99.46, maxLng: -98.82, minLat: 19.12, maxLat: 19.61 };
 const LAT0 = (BOUNDS.minLat + BOUNDS.maxLat) / 2;
