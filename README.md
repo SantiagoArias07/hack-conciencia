@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🌊 FloodSense
+# FloodSense
 
 ### Simulador de riesgo de inundación urbana para la Ciudad de México, potenciado por IA
 
@@ -14,23 +14,18 @@
 
 ---
 
-## 📸 Capturas
-
-> Reemplaza estas imágenes con tus 5 screenshots (déjalas en `docs/screenshots/`).
-
-| Inicio | Simulador |
-|:---:|:---:|
-| ![Inicio](docs/screenshots/1-inicio.png) | ![Simulador](docs/screenshots/2-simulador.png) |
-| **Alertas** | **Transparencia** |
-| ![Alertas](docs/screenshots/3-alertas.png) | ![Transparencia](docs/screenshots/4-transparencia.png) |
+## Preview
 
 <div align="center">
-
-**Móvil**
-
-<img src="docs/screenshots/5-movil.png" width="280" alt="Móvil" />
-
-</div>
+    <img src="https://github.com/user-attachments/assets/20973993-56d0-4d24-a52f-bc2f98bed581"        
+  width="48%" alt="Home" />       
+    <img src="https://github.com/user-attachments/assets/bafa0d60-b778-4f00-9420-86a51fc5f05b" 
+  width="48%" alt="Subject" />         
+    <br/><br/>                       
+    <img src="https://github.com/user-attachments/assets/557ab959-923d-49e1-8d5b-02b071a7c164"        
+  width="48%" alt="Tasks" />         
+    <img src="https://github.com/user-attachments/assets/b9e7c522-f666-4b29-8843-ece4eb3d91a9" 
+  width="48%" alt="Planner" />
 
 ---
 
