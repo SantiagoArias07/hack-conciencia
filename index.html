@@ -46,7 +46,7 @@ body{
   -webkit-font-smoothing:antialiased;
   text-rendering:optimizeLegibility;
 }
-#root{height:100vh;width:100vw;overflow:hidden}
+#root{height:100vh;height:100dvh;width:100vw;overflow:hidden}
 .mono{font-family:var(--mono);font-feature-settings:"tnum" 1,"zero" 1}
 ::selection{background:rgba(0,212,255,0.25)}
 
@@ -681,7 +681,8 @@ input[type=range].rng::-moz-range-thumb{width:18px;height:18px;border-radius:50%
   .nav-left{flex:1}
 
   .mobile-bottomnav{
-    display:flex;position:fixed;left:0;right:0;bottom:0;z-index:200;height:60px;
+    display:flex;position:fixed;left:0;right:0;bottom:0;z-index:200;
+    height:calc(58px + env(safe-area-inset-bottom,0));
     background:rgba(13,17,23,0.97);
     backdrop-filter:blur(20px) saturate(1.3);-webkit-backdrop-filter:blur(20px) saturate(1.3);
     border-top:1px solid var(--line-2);padding-bottom:env(safe-area-inset-bottom,0);
@@ -694,10 +695,10 @@ input[type=range].rng::-moz-range-thumb{width:18px;height:18px;border-radius:50%
   .mbn-item.on{color:var(--cyan)}
 
   /* scrollable sections clear the bottom nav */
-  .section{padding-bottom:74px}
+  .section{padding-bottom:calc(74px + env(safe-area-inset-bottom,0))}
 
   /* simulador: BIG map + collapsible bottom-sheet panels */
-  .sec-simulador{flex-direction:column;overflow:hidden;padding-bottom:60px}
+  .sec-simulador{flex-direction:column;overflow:hidden;padding-bottom:calc(64px + env(safe-area-inset-bottom,0))}
   .col-map{order:1;flex:1 1 auto;min-height:0;width:100%;border:none}
   .mobile-sim-tabs{
     order:2;flex:0 0 auto;display:flex;gap:8px;padding:8px 12px;
@@ -712,8 +713,8 @@ input[type=range].rng::-moz-range-thumb{width:18px;height:18px;border-radius:50%
 
   /* panels = bottom sheets that slide up over the map on demand */
   .col-left,.col-right{
-    position:fixed;left:0;right:0;bottom:116px;z-index:150;
-    max-height:56vh;width:100%;
+    position:fixed;left:0;right:0;bottom:calc(118px + env(safe-area-inset-bottom,0));z-index:150;
+    max-height:50vh;width:100%;
     background:linear-gradient(180deg,#111827,#0d1117);
     border-top:1px solid var(--line-2);border-radius:18px 18px 0 0;
     box-shadow:0 -16px 50px rgba(0,0,0,.6);
@@ -726,8 +727,9 @@ input[type=range].rng::-moz-range-thumb{width:18px;height:18px;border-radius:50%
   .col-left .panel-head,.col-right .panel-head{padding-top:18px}
   @keyframes sheetUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
 
-  /* map overlays: compact legend, hide the tech chip */
-  .map-status{display:none}
+  /* map overlays: compact legend, hide the tech chip + the hover tooltip
+     (on touch, tapping a hex shows the pinned .hexinfo card — avoid the double box) */
+  .map-status,.hextip{display:none}
   .legend{top:10px;right:10px;padding:7px 9px}
   .legend .lh{display:none}
   .legend .lrow{font-size:9.5px;padding:1.5px 0}

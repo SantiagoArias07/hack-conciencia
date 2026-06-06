@@ -191,7 +191,6 @@ const COLONIAS = [
   { name: "Del Carmen",         alcaldia: "Coyoacán",       level: 1, factor: "Drenaje con capacidad disponible",            min: 14 },
   { name: "Roma Norte",         alcaldia: "Cuauhtémoc",     level: 1, factor: "Monitoreo preventivo en Av. Insurgentes",    min: 16 },
   { name: "Toriello Guerra",    alcaldia: "Tlalpan",        level: 1, factor: "Escurrimiento del Ajusco controlado",         min: 19 },
-  { name: "Contadero",          alcaldia: "Cuajimalpa",     level: 1, factor: "Terreno elevado, riesgo bajo",                min: 23 },
 ];
 
 const CONF_COLORS = ["#34d399", "#fbbf24", "#fb923c"];

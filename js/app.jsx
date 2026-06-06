@@ -108,10 +108,13 @@ function App() {
   const onSetRain = (v) => { setRainMmh(v); setIsManual(true); setSimMode("manual"); };
   const onSetCond = (m) => { setCondMode(m); };
 
-  // EN VIVO toggle: realtime locks params + follows live real data
+  // EN VIVO toggle: realtime sigue datos reales y RESETEA los parámetros a su preset
   const onSetSimMode = (m) => {
     setSimMode(m);
-    if (m === "realtime") { setIsManual(false); setCondMode("real"); }
+    if (m === "realtime") {
+      setIsManual(false); setCondMode("real");
+      setDrainage("basico"); setSoilSat("normal"); setCanalLevel("normal");
+    }
   };
 
   // switch to manual mode when user edits any param
